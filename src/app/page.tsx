@@ -1,65 +1,110 @@
-import Image from "next/image";
+import { ImpactCounters } from "@/components/dashboard/ImpactCounters";
+import { dataService } from "@/services/dataService";
+import { 
+  calculateDigitalSkillsReadiness, 
+  calculateTechCareerInterest, 
+  calculateEmploymentReadiness 
+} from "@/utils/dataAggregation";
+import { generateInsights } from "@/utils/insightEngine";
+import { ExportReportButton } from "@/components/dashboard/ExportReportButton";
+import { ReportGenerator } from "@/components/ai/ReportGenerator";
+import { AIInsights } from "@/components/ai/AIInsights";
 
-export default function Home() {
+export default async function OverviewPage() {
+  // Fetch data
+  const data = await dataService.fetchData();
+
+  // Calculate high-level KPIs
+  const totalRespondents = data.length;
+  const uniqueLocations = new Set(data.map(d => d.location)).size;
+  
+  // These would typically be from other datasets or metadata, we'll mock them relative to data length
+  const schoolsEngaged = 12; 
+  const awarenessSessions = 24;
+  const projectDurationDays = 120;
+  
+  const digitalSkillsScore = Math.round(calculateDigitalSkillsReadiness(data));
+  const techInterestScore = Math.round(calculateTechCareerInterest(data));
+  const employmentReadinessScore = Math.round(calculateEmploymentReadiness(data));
+  const dynamicInsights = generateInsights(data);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Project Overview</h1>
+          <p className="text-slate-500 mt-2">
+            Mapping Youth Readiness and Digital Career Awareness in Port Harcourt.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <ReportGenerator />
+          <ExportReportButton data={data} />
         </div>
-      </main>
+      </div>
+
+      <ImpactCounters
+        totalRespondents={totalRespondents}
+        communitiesReached={uniqueLocations}
+        schoolsEngaged={schoolsEngaged}
+        awarenessSessions={awarenessSessions}
+        sdgsSupported={2} // SDG 8 & 9
+        projectDurationDays={projectDurationDays}
+      />
+
+      <div className="grid gap-6 md:grid-cols-3 mt-4">
+        <div className="bg-white rounded-xl border p-6 shadow-sm">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">Digital Skills Readiness</h3>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-bold text-[#0F172A]">{digitalSkillsScore}</span>
+            <span className="text-sm text-slate-500">/ 100</span>
+          </div>
+          <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
+            <div className="bg-[#0F172A] h-full rounded-full" style={{ width: `${digitalSkillsScore}%` }}></div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border p-6 shadow-sm">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">Tech Career Interest</h3>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-bold text-[#FD6925]">{techInterestScore}</span>
+            <span className="text-sm text-slate-500">/ 100</span>
+          </div>
+          <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
+            <div className="bg-[#FD6925] h-full rounded-full" style={{ width: `${techInterestScore}%` }}></div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border p-6 shadow-sm">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">Employment Readiness</h3>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-bold text-[#8F1838]">{employmentReadinessScore}</span>
+            <span className="text-sm text-slate-500">/ 100</span>
+          </div>
+          <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
+            <div className="bg-[#8F1838] h-full rounded-full" style={{ width: `${employmentReadinessScore}%` }}></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border p-8 shadow-sm mt-4">
+        <h2 className="text-xl font-bold text-slate-900 mb-4">Summary Insights</h2>
+        <ul className="space-y-4 text-slate-600">
+          {dynamicInsights.map((insight, index) => (
+            <li key={index} className="flex gap-3">
+              <div className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 ${
+                index % 3 === 0 ? 'bg-primary' : index % 3 === 1 ? 'bg-[#FD6925]' : 'bg-[#8F1838]'
+              }`}></div>
+              <p>{insight}</p>
+            </li>
+          ))}
+          {dynamicInsights.length === 0 && (
+            <p>Not enough data to generate insights.</p>
+          )}
+        </ul>
+      </div>
+
+      <AIInsights data={data} pageName="Overview" />
     </div>
   );
 }
