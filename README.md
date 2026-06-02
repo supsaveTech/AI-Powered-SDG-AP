@@ -4,8 +4,9 @@
 This project is a production-ready, open-source SDG analytics platform built for the **Digital Skills for Decent Work** initiative (SDG Advocate Programme Cohort 8). 
 
 **Project Lead:** Charles Mitchel (Participant ID: C8/M/RIV/061)  
-**Location:** Port Harcourt, Rivers State, Nigeria  
-**Primary SDGs:** SDG 8 (Decent Work and Economic Growth) & SDG 9 (Industry, Innovation and Infrastructure)
+**Case Study:** Port Harcourt, Rivers State, Nigeria  
+**Primary SDGs:** SDG 8 (Decent Work and Economic Growth) & SDG 9 (Industry, Innovation and Infrastructure)  
+**Live Demo:** [https://ai-powered-sdg-ap.vercel.app/](https://ai-powered-sdg-ap.vercel.app/)
 
 The platform assesses youth readiness for participation in the digital economy by analyzing digital access, digital skills, technology career awareness, employment readiness, and barriers to learning. It functions as both a public SDG impact dashboard and a digital research analytics platform.
 
