@@ -6,9 +6,7 @@ import {
   TrendingUp, 
   Zap, 
   Target, 
-  Bot,
-  ChevronDown,
-  ChevronUp
+  Bot
 } from "lucide-react";
 
 interface AIInsightsProps {

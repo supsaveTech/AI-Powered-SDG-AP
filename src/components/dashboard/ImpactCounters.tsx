@@ -1,27 +1,25 @@
 "use client";
 
 import { StatCard } from "./StatCard";
-import { Users, MapPin, School, Mic, Target, CalendarDays } from "lucide-react";
+import { Users, MapPin, BrainCircuit, Briefcase, Target } from "lucide-react";
 
 interface ImpactCountersProps {
   totalRespondents: number;
   communitiesReached: number;
-  schoolsEngaged: number;
-  awarenessSessions: number;
+  aiAdoptionRate: number;
+  remoteWorkInterest: number;
   sdgsSupported: number;
-  projectDurationDays: number;
 }
 
 export function ImpactCounters({
   totalRespondents,
   communitiesReached,
-  schoolsEngaged,
-  awarenessSessions,
-  sdgsSupported,
-  projectDurationDays
+  aiAdoptionRate,
+  remoteWorkInterest,
+  sdgsSupported
 }: ImpactCountersProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-8">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-8">
       <StatCard
         title="Total Respondents"
         value={totalRespondents}
@@ -37,16 +35,16 @@ export function ImpactCounters({
         colorClass="text-[#FD6925]"
       />
       <StatCard
-        title="Schools Engaged"
-        value={schoolsEngaged}
-        icon={School}
+        title="AI Adoption Rate"
+        value={`${aiAdoptionRate}%`}
+        icon={BrainCircuit}
         delay={0.3}
         colorClass="text-[#8F1838]"
       />
       <StatCard
-        title="Awareness Sessions"
-        value={awarenessSessions}
-        icon={Mic}
+        title="Remote Work Interest"
+        value={`${remoteWorkInterest}%`}
+        icon={Briefcase}
         delay={0.4}
         colorClass="text-primary"
       />
@@ -56,13 +54,6 @@ export function ImpactCounters({
         icon={Target}
         delay={0.5}
         colorClass="text-[#FD6925]"
-      />
-      <StatCard
-        title="Project Days"
-        value={projectDurationDays}
-        icon={CalendarDays}
-        delay={0.6}
-        colorClass="text-[#8F1838]"
       />
     </div>
   );

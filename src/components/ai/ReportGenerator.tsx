@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FileText, Download, X, Bot } from "lucide-react";
+import { dataService } from "@/services/dataService";
 
 export function ReportGenerator() {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,11 +14,16 @@ export function ReportGenerator() {
     setReport(null);
 
     try {
+      const status = dataService.getDataStatus().syncStatus;
+      const notice = status === 'mock' 
+        ? "IMPORTANT: State clearly that the following observations are generated from demonstration data and should not be interpreted as actual survey findings."
+        : "IMPORTANT: Frame the insights as based on responses collected from youths in Port Harcourt.";
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [{ role: "user", content: "Generate a comprehensive executive summary report covering all aspects of the digital skills survey: demographics, access, skills, barriers, and SDG alignment. Format it clearly with headings and bullet points." }]
+          messages: [{ role: "user", content: `Generate a comprehensive executive summary report covering all aspects of the digital skills survey: demographics, access, skills, barriers, and SDG alignment. Format it clearly with headings and bullet points. IMPORTANT: Include markdown tables that explicitly map your key findings and metrics back to the specific survey question numbers (e.g., Q11, Q23) that generated them. ${notice}` }]
         }),
       });
 

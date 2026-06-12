@@ -9,19 +9,27 @@ export default async function MethodologyPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">Methodology</h1>
         <p className="text-slate-500 mt-2">
-          Data collection strategy, sampling methods, and analytical framework.
+          Data collection strategy, index calculations, and platform architecture.
         </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="bg-white rounded-xl border p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">Data Collection</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-4">Data Collection & Integration</h2>
           <div className="prose prose-slate max-w-none text-slate-600">
             <p>
-              Data was collected via online surveys distributed through local schools, community centers, and youth organizations across multiple states.
+              Data was collected via online and offline survey instruments distributed across Port Harcourt.
             </p>
             <p>
-              The survey instruments were designed to capture a broad spectrum of digital engagement metrics, including device access, internet reliability, career awareness, and self-reported skill levels.
+              <strong>Data Integration Priority Strategy:</strong>
+              <br />
+              1. <em>Google Sheets API:</em> Direct real-time sync with live forms.
+              <br />
+              2. <em>Published CSV URL:</em> Fallback to public web-published CSV.
+              <br />
+              3. <em>Uploaded CSV:</em> Local cached data ingested via the Admin panel.
+              <br />
+              4. <em>Mock Data:</em> Development fallback if all live connections fail.
             </p>
           </div>
         </div>
@@ -30,11 +38,37 @@ export default async function MethodologyPage() {
           <h2 className="text-xl font-bold text-slate-900 mb-4">Sampling Strategy</h2>
           <div className="prose prose-slate max-w-none text-slate-600">
             <p>
-              A stratified random sampling approach was employed to ensure representation across different age groups, genders, and geographic locations (urban vs. rural).
+              A randomized, mixed-methods sampling approach was employed targeting youth and educators across different geographic locations in Port Harcourt (urban vs. peri-urban).
             </p>
             <p>
-              Sample Size: <strong>{data.length}</strong> respondents.
+              Current Active Sample Size: <strong>{data.length}</strong> respondents.
             </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border p-6 shadow-sm">
+        <h2 className="text-xl font-bold text-slate-900 mb-4">Index Calculations</h2>
+        <div className="grid md:grid-cols-2 gap-4 text-sm text-slate-600">
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <h3 className="font-bold text-slate-900 mb-2">AI Readiness Index</h3>
+            <p>Evaluates awareness, usage frequency, and diversity of AI tools used. Max score: 100.</p>
+          </div>
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <h3 className="font-bold text-slate-900 mb-2">Digital Access Index</h3>
+            <p>Calculates baseline infrastructure readiness combining device ownership, internet reliability, and electricity access. Max score: 100.</p>
+          </div>
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <h3 className="font-bold text-slate-900 mb-2">Digital Skills Readiness Score</h3>
+            <p>A weighted composite of self-reported skill levels, coding experience, and breadth of digital skills possessed. Max score: 100.</p>
+          </div>
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <h3 className="font-bold text-slate-900 mb-2">Employment Readiness Index</h3>
+            <p>Measures alignment of aspirations and desired skills with modern, flexible job markets (remote/hybrid). Max score: 100.</p>
+          </div>
+          <div className="bg-slate-50 p-4 rounded-lg md:col-span-2">
+            <h3 className="font-bold text-slate-900 mb-2">Traceability</h3>
+            <p>Every KPI, index, and chart on this platform traces directly back to a specific survey question (Q1-Q31), ensuring complete data transparency.</p>
           </div>
         </div>
       </div>
@@ -43,10 +77,10 @@ export default async function MethodologyPage() {
         <h2 className="text-xl font-bold text-slate-900 mb-4">AI-Augmented Analysis Framework</h2>
         <div className="prose prose-slate max-w-none text-slate-600">
           <p>
-            Traditional descriptive statistics are augmented using advanced Generative AI capabilities. The dataset is ingested, aggregated, and mapped against the United Nations Sustainable Development Goals (SDGs).
+            Traditional descriptive statistics are augmented using advanced Generative AI capabilities via RAG (Retrieval-Augmented Generation). The dataset is ingested, aggregated into a localized context, and mapped against the United Nations Sustainable Development Goals (SDGs 8 and 9).
           </p>
           <p>
-            By leveraging Large Language Models (LLMs) with a robust heuristic fallback engine, this dashboard provides real-time, context-aware insights, strategic recommendations, and interactive chatbot functionality without requiring constant manual data interpretation.
+            This hybrid approach provides real-time, context-aware insights, strategic recommendations, and interactive chatbot functionality without requiring constant manual data interpretation.
           </p>
         </div>
       </div>

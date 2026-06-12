@@ -1,8 +1,8 @@
 import { SurveyResponse } from "../types";
 import { 
   calculateDigitalSkillsReadiness, 
-  calculateTechCareerInterest, 
-  generateBarrierRanking 
+  calculateCareerAwarenessScore, 
+  calculateBarrierSeverity 
 } from "./dataAggregation";
 
 export const generateInsights = (data: SurveyResponse[]) => {
@@ -20,7 +20,7 @@ export const generateInsights = (data: SurveyResponse[]) => {
   }
 
   // Insight 2: Career Interest vs Awareness
-  const techInterest = calculateTechCareerInterest(data);
+  const techInterest = calculateCareerAwarenessScore(data);
   const digitalSkills = calculateDigitalSkillsReadiness(data);
   
   if (techInterest > digitalSkills + 10) {
@@ -28,7 +28,7 @@ export const generateInsights = (data: SurveyResponse[]) => {
   }
 
   // Insight 3: Top Barrier
-  const barriers = generateBarrierRanking(data);
+  const barriers = calculateBarrierSeverity(data);
   if (barriers.length > 0) {
     const topBarrier = barriers[0];
     if (topBarrier.score > 3.5) {

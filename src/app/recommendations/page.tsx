@@ -1,5 +1,6 @@
 import { dataService } from "@/services/dataService";
 import { AIInsights } from "@/components/ai/AIInsights";
+import DataSourceTag from "@/components/ui/DataSourceTag";
 
 export default async function RecommendationsPage() {
   const data = await dataService.fetchData();
@@ -68,6 +69,10 @@ export default async function RecommendationsPage() {
             </ul>
           </div>
         ))}
+      </div>
+
+      <div className="mt-2">
+        <DataSourceTag questionNumbers={[30, 31]} />
       </div>
 
       <AIInsights data={data} pageName="Recommendations" />

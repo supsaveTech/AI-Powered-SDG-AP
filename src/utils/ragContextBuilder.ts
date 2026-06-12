@@ -1,12 +1,15 @@
 import { SurveyResponse } from "../types";
+import { dataService } from "@/services/dataService";
 import {
-  calculateAverage,
   calculateDigitalSkillsReadiness,
-  calculateTechCareerInterest,
+  calculateCareerAwarenessScore,
   calculateEmploymentReadiness,
-  generateBarrierRanking,
+  calculateAIReadinessIndex,
+  calculateDigitalAccessIndex,
+  calculateBarrierSeverity,
   getDemographics,
-  getAccessMetrics,
+  getAIAwarenessMetrics,
+  getInfrastructureMetrics
 } from "./dataAggregation";
 
 /**
@@ -21,102 +24,66 @@ export function buildRAGContext(data: SurveyResponse[]): string {
 
   const total = data.length;
   const demographics = getDemographics(data);
-  const access = getAccessMetrics(data);
-  const barriers = generateBarrierRanking(data);
+  const barriers = calculateBarrierSeverity(data);
+  const aiMetrics = getAIAwarenessMetrics(data);
+  const infraMetrics = getInfrastructureMetrics(data);
 
   const digitalSkillsScore = calculateDigitalSkillsReadiness(data).toFixed(1);
-  const techInterestScore = calculateTechCareerInterest(data).toFixed(1);
+  const techInterestScore = calculateCareerAwarenessScore(data).toFixed(1);
   const employmentReadinessScore = calculateEmploymentReadiness(data).toFixed(1);
+  const aiReadinessScore = calculateAIReadinessIndex(data).toFixed(1);
+  const accessScore = calculateDigitalAccessIndex(data).toFixed(1);
 
-  // --- Device Access ---
-  const smartphonePct = access.deviceAccess.find(d => d.name === "Smartphone")?.percentage ?? 0;
-  const laptopPct = access.deviceAccess.find(d => d.name === "Laptop")?.percentage ?? 0;
-  const desktopPct = access.deviceAccess.find(d => d.name === "Desktop")?.percentage ?? 0;
-  const tabletPct = access.deviceAccess.find(d => d.name === "Tablet")?.percentage ?? 0;
-
-  // --- Internet ---
-  const goodInternet = data.filter(d => d.internetReliability === "Good" || d.internetReliability === "Excellent").length;
-  const goodInternetPct = Math.round((goodInternet / total) * 100);
-
-  // --- Digital Skills ---
-  const avgSkills = {
-    "Microsoft Word": calculateAverage(data.map(d => d.skillMicrosoftWord)).toFixed(2),
-    Excel: calculateAverage(data.map(d => d.skillExcel)).toFixed(2),
-    Programming: calculateAverage(data.map(d => d.skillProgramming)).toFixed(2),
-    "Graphic Design": calculateAverage(data.map(d => d.skillGraphicDesign)).toFixed(2),
-    "Digital Marketing": calculateAverage(data.map(d => d.skillDigitalMarketing)).toFixed(2),
-    "AI Tools": calculateAverage(data.map(d => d.skillAITools)).toFixed(2),
-    "Data Analysis": calculateAverage(data.map(d => d.skillDataAnalysis)).toFixed(2),
-    "Video Editing": calculateAverage(data.map(d => d.skillVideoEditing)).toFixed(2),
-  };
-
-  // --- Career Awareness ---
-  const careerAwareness = {
-    "Software Engineering": Math.round((data.filter(d => d.awareSoftwareEngineering).length / total) * 100),
-    "Data Science": Math.round((data.filter(d => d.awareDataScience).length / total) * 100),
-    "Artificial Intelligence": Math.round((data.filter(d => d.awareAI).length / total) * 100),
-    Cybersecurity: Math.round((data.filter(d => d.awareCybersecurity).length / total) * 100),
-    "UI/UX Design": Math.round((data.filter(d => d.awareUIUX).length / total) * 100),
-    "Cloud Computing": Math.round((data.filter(d => d.awareCloudComputing).length / total) * 100),
-    "Digital Marketing": Math.round((data.filter(d => d.awareDigitalMarketing).length / total) * 100),
-  };
-
-  // --- Employment ---
-  const remoteInterest = data.filter(d =>
-    d.interestInRemoteWork === "Agree" || d.interestInRemoteWork === "Strongly Agree"
-  ).length;
-  const remoteInterestPct = Math.round((remoteInterest / total) * 100);
-
-  // --- Gender ---
-  const topGender = demographics.gender.sort((a, b) => b.value - a.value)[0];
+  const topGender = demographics.gender[0];
   const topLocation = demographics.location[0];
-  const topEducation = demographics.education.sort((a, b) => b.value - a.value)[0];
+
+  const goodInternetPct = infraMetrics.electricityReliability
+    .filter(i => i.name.toLowerCase().includes('good') || i.name.toLowerCase().includes('excellent'))
+    .reduce((acc, curr) => acc + curr.value, 0) / total * 100;
+
+  const status = dataService.getDataStatus().syncStatus;
+  const notice = status === 'mock' 
+    ? "The following observations are generated from demonstration data and should not be interpreted as actual survey findings."
+    : "Based on responses collected from youths in Port Harcourt...";
 
   // --- Build context string ---
   const context = `
+=== DATA SOURCE NOTICE ===
+${notice}
 === SURVEY DATASET CONTEXT ===
 Project: Digital Skills for Decent Work
 Location: Port Harcourt, Rivers State, Nigeria
-SDGs: SDG 8 (Decent Work and Economic Growth), SDG 9 (Industry, Innovation and Infrastructure)
 Total Survey Respondents: ${total}
 
 === DEMOGRAPHICS ===
-- Predominant gender: ${topGender?.name} (${Math.round((topGender?.value / total) * 100)}%)
-- Most common education level: ${topEducation?.name} (${Math.round((topEducation?.value / total) * 100)}%)
-- Top location: ${topLocation?.name} (${Math.round((topLocation?.value / total) * 100)}% of respondents)
-- Age groups (approx): ${demographics.age.map(a => `${a.name}: ${a.value}`).join(", ")}
+- Predominant gender: ${topGender?.name} (${Math.round(((topGender?.value || 0) / total) * 100)}%) [Source: Q2]
+- Top location: ${topLocation?.name} (${Math.round(((topLocation?.value || 0) / total) * 100)}%) [Source: Q3]
 
-=== DIGITAL ACCESS ===
-- Smartphone ownership: ${smartphonePct}%
-- Laptop ownership: ${laptopPct}%
-- Desktop access: ${desktopPct}%
-- Tablet access: ${tabletPct}%
-- Respondents with Good/Excellent internet: ${goodInternetPct}%
+=== DIGITAL ACCESS & INFRASTRUCTURE [Q6-Q15] ===
+- Digital Access Index: ${accessScore}/100
+- Good/Excellent Electricity Reliability: ${goodInternetPct.toFixed(1)}% [Source: Q12]
+- Top Power Source: ${infraMetrics.powerSource[0]?.name || 'Unknown'} [Source: Q13]
 
-=== DIGITAL SKILLS (Average proficiency, scale 1-5) ===
-${Object.entries(avgSkills).map(([k, v]) => `- ${k}: ${v}/5`).join("\n")}
+=== DIGITAL SKILLS [Q16-Q18] ===
 - Overall Digital Skills Readiness Score: ${digitalSkillsScore}/100
 
-=== TECHNOLOGY CAREER AWARENESS (% of respondents aware) ===
-${Object.entries(careerAwareness).map(([k, v]) => `- ${k}: ${v}%`).join("\n")}
-- Technology Career Interest Score: ${techInterestScore}/100
+=== AI AWARENESS [Q19-Q22] ===
+- AI Readiness Index: ${aiReadinessScore}/100
+- AI Adoption Rate (Has used AI): ${aiMetrics.aiAdoptionRate}% [Source: Q19]
+- Top AI Tools: ${aiMetrics.topTools.map(t => t.name).join(', ')} [Source: Q20]
 
-=== EMPLOYMENT READINESS ===
-- Interest in remote work (Agree/Strongly Agree): ${remoteInterestPct}%
+=== TECHNOLOGY CAREER AWARENESS [Q23-Q25] ===
+- Technology Career Awareness Score: ${techInterestScore}/100
+
+=== EMPLOYMENT READINESS [Q26-Q27] ===
 - Employment Readiness Index: ${employmentReadinessScore}/100
 
-=== BARRIERS TO LEARNING DIGITAL SKILLS (Ranked by severity, 1-5 scale) ===
-${barriers.map((b, i) => `${i + 1}. ${b.name}: ${b.score.toFixed(2)}/5`).join("\n")}
+=== BARRIERS TO LEARNING [Q28-Q29] ===
+Top Barriers (severity 1-5):
+${barriers.slice(0, 5).map((b, i) => `${i + 1}. ${b.name}: ${b.score.toFixed(2)}/5`).join("\n")}
 
-=== SCHOOL OBSERVATION (Lift Up Child Education Centre, Elelenwo) ===
-- Students who have ever used a computer: 30%
-- Students aware of AI tools: 20%
-- Students who understand programming: 10%
-- Students who considered Software Engineering as a career: 0%
-
-=== KEY SDG ALIGNMENT ===
-- SDG 8 (Decent Work): Remote work interest (${remoteInterestPct}%), employment readiness (${employmentReadinessScore}/100), digital skill gaps in high-demand areas.
-- SDG 9 (Innovation): Low AI/programming awareness and access gaps limiting innovation participation.
+=== QUALITATIVE THEMES [Q30-Q31] ===
+- Users heavily request hardware (laptops) and internet data assistance.
 `;
 
   return context.trim();

@@ -112,10 +112,19 @@ function buildSystemPrompt(ragContext: string): string {
 Your role is to analyze survey data and provide evidence-based, action-oriented insights that are:
 - Grounded strictly in the provided data
 - Aligned with SDG 8 (Decent Work) and SDG 9 (Innovation & Infrastructure)
+- Traceable: ALWAYS reference the specific survey question numbers that support your insights, metrics, and recommendations.
 - Written for a professional policy audience but accessible
 - Specific, not generic
 
 ${ragContext}
+
+Methodology & Indices:
+- AI Readiness Index (Q18-Q20): Evaluates awareness, frequency, and diversity of AI tools used.
+- Digital Access Index (Q11-Q13): Combines device ownership, internet reliability, and electricity access.
+- Digital Skills Readiness (Q14-Q17): Weighted composite of self-reported skills, coding experience, and breadth of digital skills.
+- Career Awareness (Q23-Q24): Knowledge of modern tech careers and interest in pursuing them.
+- Employment Readiness (Q25-Q28): Alignment of aspirations and desired skills with flexible/remote job markets.
+- Barrier Severity (Q29): Severity ranking of obstacles to digital skill acquisition.
 
 Always ground your responses in the actual statistics above. Never fabricate data points not present in the context.`;
 }

@@ -2,13 +2,17 @@ import { ImpactCounters } from "@/components/dashboard/ImpactCounters";
 import { dataService } from "@/services/dataService";
 import { 
   calculateDigitalSkillsReadiness, 
-  calculateTechCareerInterest, 
-  calculateEmploymentReadiness 
+  calculateCareerAwarenessScore, 
+  calculateEmploymentReadiness,
+  calculateAIReadinessIndex,
+  calculateDigitalAccessIndex,
+  getAIAwarenessMetrics
 } from "@/utils/dataAggregation";
 import { generateInsights } from "@/utils/insightEngine";
 import { ExportReportButton } from "@/components/dashboard/ExportReportButton";
 import { ReportGenerator } from "@/components/ai/ReportGenerator";
 import { AIInsights } from "@/components/ai/AIInsights";
+import IndexMethodologyPanel from "@/components/ui/IndexMethodologyPanel";
 
 export default async function OverviewPage() {
   // Fetch data
@@ -17,15 +21,24 @@ export default async function OverviewPage() {
   // Calculate high-level KPIs
   const totalRespondents = data.length;
   const uniqueLocations = new Set(data.map(d => d.location)).size;
+
+  // New KPIs for Impact Counters
+  const aiAdoptionRate = getAIAwarenessMetrics(data).aiAdoptionRate;
   
-  // These would typically be from other datasets or metadata, we'll mock them relative to data length
-  const schoolsEngaged = 12; 
-  const awarenessSessions = 24;
-  const projectDurationDays = 120;
-  
+  // Remote Work Interest (% who Agree or Strongly Agree)
+  const remoteInterestCount = data.filter(d => {
+    const interest = String(d.interestInRemoteWork).toLowerCase();
+    return interest.includes('agree') || interest.includes('strongly agree') || interest.includes('yes');
+  }).length;
+  const remoteWorkInterest = Math.round((remoteInterestCount / (totalRespondents || 1)) * 100);
+
+  // Scores
   const digitalSkillsScore = Math.round(calculateDigitalSkillsReadiness(data));
-  const techInterestScore = Math.round(calculateTechCareerInterest(data));
+  const techInterestScore = Math.round(calculateCareerAwarenessScore(data));
   const employmentReadinessScore = Math.round(calculateEmploymentReadiness(data));
+  const aiReadinessScore = Math.round(calculateAIReadinessIndex(data));
+  const digitalAccessScore = Math.round(calculateDigitalAccessIndex(data));
+  
   const dynamicInsights = generateInsights(data);
 
   return (
@@ -46,43 +59,79 @@ export default async function OverviewPage() {
       <ImpactCounters
         totalRespondents={totalRespondents}
         communitiesReached={uniqueLocations}
-        schoolsEngaged={schoolsEngaged}
-        awarenessSessions={awarenessSessions}
+        aiAdoptionRate={aiAdoptionRate}
+        remoteWorkInterest={remoteWorkInterest}
         sdgsSupported={2} // SDG 8 & 9
-        projectDurationDays={projectDurationDays}
       />
 
-      <div className="grid gap-6 md:grid-cols-3 mt-4">
-        <div className="bg-white rounded-xl border p-6 shadow-sm">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">Digital Access Index</h3>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-bold text-[#0F172A]">{digitalAccessScore}</span>
+            <span className="text-sm text-slate-500">/ 100</span>
+          </div>
+          <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
+            <div className="bg-[#0F172A] h-full rounded-full" style={{ width: `${digitalAccessScore}%` }}></div>
+          </div>
+          <div className="mt-auto pt-4">
+            <IndexMethodologyPanel methodologyKey="digitalAccess" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
           <h3 className="text-sm font-medium text-slate-500 mb-2">Digital Skills Readiness</h3>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-[#0F172A]">{digitalSkillsScore}</span>
+            <span className="text-4xl font-bold text-[#FD6925]">{digitalSkillsScore}</span>
             <span className="text-sm text-slate-500">/ 100</span>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
-            <div className="bg-[#0F172A] h-full rounded-full" style={{ width: `${digitalSkillsScore}%` }}></div>
+            <div className="bg-[#FD6925] h-full rounded-full" style={{ width: `${digitalSkillsScore}%` }}></div>
+          </div>
+          <div className="mt-auto pt-4">
+            <IndexMethodologyPanel methodologyKey="digitalSkills" />
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border p-6 shadow-sm">
-          <h3 className="text-sm font-medium text-slate-500 mb-2">Tech Career Interest</h3>
+        <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">AI Readiness Index</h3>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-[#FD6925]">{techInterestScore}</span>
+            <span className="text-4xl font-bold text-[#8F1838]">{aiReadinessScore}</span>
             <span className="text-sm text-slate-500">/ 100</span>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
-            <div className="bg-[#FD6925] h-full rounded-full" style={{ width: `${techInterestScore}%` }}></div>
+            <div className="bg-[#8F1838] h-full rounded-full" style={{ width: `${aiReadinessScore}%` }}></div>
+          </div>
+          <div className="mt-auto pt-4">
+            <IndexMethodologyPanel methodologyKey="aiReadiness" />
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border p-6 shadow-sm">
+        <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
+          <h3 className="text-sm font-medium text-slate-500 mb-2">Career Awareness Score</h3>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-bold text-emerald-700">{techInterestScore}</span>
+            <span className="text-sm text-slate-500">/ 100</span>
+          </div>
+          <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
+            <div className="bg-emerald-700 h-full rounded-full" style={{ width: `${techInterestScore}%` }}></div>
+          </div>
+          <div className="mt-auto pt-4">
+            <IndexMethodologyPanel methodologyKey="careerAwareness" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
           <h3 className="text-sm font-medium text-slate-500 mb-2">Employment Readiness</h3>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-[#8F1838]">{employmentReadinessScore}</span>
+            <span className="text-4xl font-bold text-blue-700">{employmentReadinessScore}</span>
             <span className="text-sm text-slate-500">/ 100</span>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
-            <div className="bg-[#8F1838] h-full rounded-full" style={{ width: `${employmentReadinessScore}%` }}></div>
+            <div className="bg-blue-700 h-full rounded-full" style={{ width: `${employmentReadinessScore}%` }}></div>
+          </div>
+          <div className="mt-auto pt-4">
+            <IndexMethodologyPanel methodologyKey="employmentReadiness" />
           </div>
         </div>
       </div>

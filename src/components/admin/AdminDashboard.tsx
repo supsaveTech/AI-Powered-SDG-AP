@@ -1,13 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { dataService } from "@/services/dataService";
+import { useState, useEffect, useCallback } from "react";
+import { dataService, DataStatus } from "@/services/dataService";
+import { getManualOverrides, setManualOverride, normalizeCommunityNameWithMethod } from "@/utils/communityNormalizer";
+import { ResponsesOverTimeChart } from "@/components/dashboard/ResponsesOverTimeChart";
+import { getResponseGrowthTimeSeries } from "@/utils/dataAggregation";
+import { SurveyResponse } from "@/types";
 
 export function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  const [status, setStatus] = useState<any>(null);
+  const [status, setStatus] = useState<DataStatus | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [rawName, setRawName] = useState("");
+  const [canonicalName, setCanonicalName] = useState("");
+  const [data, setData] = useState<SurveyResponse[]>([]);
+
+  const loadOverrides = useCallback(() => {
+    setOverrides(getManualOverrides());
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadOverrides();
+    }
+  }, [isAuthenticated, loadOverrides]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +40,7 @@ export function AdminDashboard() {
 
   const refreshStatus = () => {
     setStatus(dataService.getDataStatus());
+    dataService.fetchData().then(setData);
   };
 
   const handleRefreshData = async () => {
@@ -49,6 +69,16 @@ export function AdminDashboard() {
     reader.readAsText(file);
   };
 
+  const handleAddOverride = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (rawName.trim() && canonicalName.trim()) {
+      setManualOverride(rawName, canonicalName);
+      setOverrides(getManualOverrides());
+      setRawName("");
+      setCanonicalName("");
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="flex h-full items-center justify-center p-6">
@@ -62,7 +92,7 @@ export function AdminDashboard() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0F172A]"
-                placeholder="Enter admin password (sdg2026)"
+                placeholder="Enter admin password"
               />
             </div>
             <button 
@@ -134,6 +164,85 @@ export function AdminDashboard() {
             <span className="text-sm font-medium text-slate-900">Click to upload CSV</span>
             <p className="text-xs text-slate-500 mt-1">or drag and drop</p>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border p-6 shadow-sm">
+        <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Survey Monitoring</h2>
+            <p className="text-sm text-slate-500">Cumulative project reach and daily survey submission trends.</p>
+          </div>
+          <div className="flex gap-4 mt-2 md:mt-0 text-sm">
+            <div>
+              <span className="text-slate-500">First Response: </span>
+              <span className="font-medium">{data.length > 0 ? getResponseGrowthTimeSeries(data)[0]?.date : 'N/A'}</span>
+            </div>
+            <div>
+              <span className="text-slate-500">Latest Response: </span>
+              <span className="font-medium">{data.length > 0 ? getResponseGrowthTimeSeries(data).slice(-1)[0]?.date : 'N/A'}</span>
+            </div>
+          </div>
+        </div>
+        <ResponsesOverTimeChart data={getResponseGrowthTimeSeries(data)} />
+      </div>
+
+      <div className="bg-white rounded-xl border p-6 shadow-sm">
+        <h2 className="text-xl font-bold text-slate-900 mb-4">Community Name Management</h2>
+        <p className="text-sm text-slate-500 mb-6">
+          Map raw community names from survey responses to clean canonical names. This takes precedence over fuzzy matching.
+        </p>
+
+        <form onSubmit={handleAddOverride} className="flex gap-4 mb-6">
+          <input
+            type="text"
+            placeholder="Raw Name (e.g. Elenlenwo)"
+            value={rawName}
+            onChange={(e) => setRawName(e.target.value)}
+            className="flex-1 border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0F172A]"
+          />
+          <input
+            type="text"
+            placeholder="Canonical Name (e.g. Elelenwo)"
+            value={canonicalName}
+            onChange={(e) => setCanonicalName(e.target.value)}
+            className="flex-1 border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0F172A]"
+          />
+          <button type="submit" className="bg-[#0F172A] text-white rounded-md px-6 py-2 hover:bg-slate-800 transition-colors">
+            Add Override
+          </button>
+        </form>
+
+        <div className="border rounded-md overflow-hidden">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 border-b">
+              <tr>
+                <th className="px-4 py-3 font-medium text-slate-600">Raw Input</th>
+                <th className="px-4 py-3 font-medium text-slate-600">Canonical Output</th>
+                <th className="px-4 py-3 font-medium text-slate-600">Match Method</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {Object.entries(overrides).length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-4 py-3 text-slate-500 text-center">No manual overrides defined.</td>
+                </tr>
+              ) : (
+                Object.entries(overrides).map(([raw, canonical]) => {
+                  const match = normalizeCommunityNameWithMethod(raw);
+                  return (
+                    <tr key={raw}>
+                      <td className="px-4 py-3 font-mono text-slate-700">{raw}</td>
+                      <td className="px-4 py-3 text-emerald-600 font-medium">{canonical}</td>
+                      <td className="px-4 py-3 text-slate-500">
+                        <span className="bg-slate-100 px-2 py-1 rounded text-xs">{match.matchMethod}</span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
