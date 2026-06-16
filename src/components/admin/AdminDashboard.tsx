@@ -115,14 +115,14 @@ export function AdminDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin Panel</h1>
           <p className="text-slate-500 mt-2">Manage data pipelines, view diagnostics, and system status.</p>
         </div>
         <button 
           onClick={handleLogout}
-          className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-md text-sm font-medium hover:bg-slate-50"
+          className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-md text-sm font-medium hover:bg-slate-50 shrink-0"
         >
           <LogOut className="w-4 h-4" />
           Logout
@@ -370,7 +370,7 @@ export function AdminDashboard() {
           Map raw community names from survey responses to clean canonical names. This takes precedence over fuzzy matching.
         </p>
 
-        <form onSubmit={handleAddOverride} className="flex gap-4 mb-6">
+        <form onSubmit={handleAddOverride} className="flex flex-col md:flex-row gap-4 mb-6">
           <input
             type="text"
             placeholder="Raw Name (e.g. Elenlenwo)"
@@ -385,7 +385,7 @@ export function AdminDashboard() {
             onChange={(e) => setCanonicalName(e.target.value)}
             className="flex-1 border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0F172A]"
           />
-          <button type="submit" className="bg-[#0F172A] text-white rounded-md px-6 py-2 hover:bg-slate-800 transition-colors">
+          <button type="submit" className="bg-[#0F172A] text-white rounded-md px-6 py-2 hover:bg-slate-800 transition-colors md:whitespace-nowrap">
             Add Override
           </button>
         </form>

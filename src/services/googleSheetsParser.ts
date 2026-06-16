@@ -34,6 +34,9 @@ export interface ParseResult {
 function normalizeHeader(raw: string): string {
   return raw
     .replace(/\r?\n|\r/g, ' ')      // replace line breaks with space
+    .replace(/\(check all that apply\)/gi, '') // remove "(Check all that apply)"
+    .replace(/^\d+\.\s*/, '')       // remove numbering prefixes like "26. "
+    .replace(/[.,?]+$/g, '')        // remove trailing punctuation
     .replace(/\s+/g, ' ')           // collapse multiple spaces
     .trim()
     .toLowerCase();

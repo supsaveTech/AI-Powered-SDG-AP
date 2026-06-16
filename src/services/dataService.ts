@@ -245,7 +245,7 @@ export class DataService {
 
   private async fetchFromGoogleSheets(apiKey: string, sheetId: string): Promise<boolean> {
     this.spreadsheetId = sheetId;
-    this.requestedRange = 'Form Responses 1!A:Z';
+    this.requestedRange = 'Form Responses 1!A:BZ';
     this.requestUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${this.requestedRange}?key=***HIDDEN***`;
     this.source = 'Google Sheets API';
 

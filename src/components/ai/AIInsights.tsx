@@ -38,8 +38,10 @@ export function AIInsights({ pageName, data }: AIInsightsProps) {
         
         const result = await res.json();
         setInsights(result.insights);
-      } catch (e: any) {
-        setError(e.message || "Failed to load AI insights.");
+      } catch (error: unknown) {
+        console.error("AI Insight Generation Error:", error);
+        const errorMessage = error instanceof Error ? error.message : "Failed to connect to AI service. Please try again later.";
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
