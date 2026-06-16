@@ -92,7 +92,7 @@ export default function BarriersPage() {
         <div className="h-80">
           <BarChartWrapper data={rankings} xDataKey="name" yDataKey="score" fill="#8F1838" />
         </div>
-        <DataSourceTag questionNumbers={[28, 29]} />
+        <DataSourceTag questionNumbers={[27, 28]} />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 mt-4">
@@ -101,7 +101,7 @@ export default function BarriersPage() {
           <div className="flex-1">
             <BarChartWrapper data={allBarriersData} xDataKey="name" yDataKey="value" fill="#0F172A" />
           </div>
-          <DataSourceTag questionNumbers={[28]} />
+          <DataSourceTag questionNumbers={[27]} />
         </div>
 
         <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
@@ -109,7 +109,7 @@ export default function BarriersPage() {
           <div className="flex-1">
             <PieChartWrapper data={biggestBarrierData} nameKey="name" dataKey="value" />
           </div>
-          <DataSourceTag questionNumbers={[29]} />
+          <DataSourceTag questionNumbers={[28]} />
         </div>
 
         <div className="bg-white rounded-xl border p-6 shadow-sm">

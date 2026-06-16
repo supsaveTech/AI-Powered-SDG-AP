@@ -1,5 +1,5 @@
 import { SurveyResponse } from '../types';
-import { parseGoogleSheetsData, HeaderValidationResult } from './googleSheetsParser';
+import { parseGoogleSheetsData, HeaderValidationResult, HeaderMatchEntry } from './googleSheetsParser';
 import { parseCsvData } from './csvParser';
 
 export type SyncStatus = 
@@ -34,6 +34,7 @@ export interface DataDiagnostics {
   restoredFromCache: boolean;
   startupLog: string[];
   headerValidation: HeaderValidationResult | null;
+  detectedHeaders: HeaderMatchEntry[];
 }
 
 export interface DataStatus {
@@ -96,10 +97,19 @@ export class DataService {
       return;
     }
 
-    // Try restoring validation
+    // Try restoring validation (only if it has the newer detectedHeaders field)
     try {
       const vCache = localStorage.getItem(VALIDATION_CACHE_KEY);
-      if (vCache) this.headerValidation = JSON.parse(vCache);
+      if (vCache) {
+        const parsed = JSON.parse(vCache);
+        // Guard: only use cached validation if it has the detectedHeaders array
+        if (parsed && Array.isArray(parsed.detectedHeaders)) {
+          this.headerValidation = parsed;
+        } else {
+          // Stale cache: clear it so next live sync regenerates
+          localStorage.removeItem(VALIDATION_CACHE_KEY);
+        }
+      }
     } catch (e) {}
 
     // 1. Try uploaded CSV first (user explicitly uploaded)
@@ -391,6 +401,7 @@ export class DataService {
       restoredFromCache: this.restoredFromCache,
       startupLog: [...this.startupLog],
       headerValidation: this.headerValidation,
+      detectedHeaders: this.headerValidation?.detectedHeaders ?? [],
     };
   }
 

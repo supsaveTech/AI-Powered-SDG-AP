@@ -308,6 +308,62 @@ export function AdminDashboard() {
         <ResponsesOverTimeChart data={getResponseGrowthTimeSeries(data)} />
       </div>
 
+      {/* DETECTED SURVEY HEADERS */}
+      <div className="bg-white rounded-xl border p-6 shadow-sm">
+        <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Detected Survey Headers</h2>
+            <p className="text-sm text-slate-500">
+              Every column detected from the connected Google Sheets / CSV. Unmatched columns are not mapped to any survey question.
+            </p>
+          </div>
+          <div className="flex gap-3 text-xs shrink-0">
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />Matched</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-300 inline-block" />Unmatched</span>
+          </div>
+        </div>
+
+        {(!diagnostics?.detectedHeaders || diagnostics.detectedHeaders.length === 0) ? (
+          <div className="text-slate-400 text-sm italic py-4 text-center">
+            No header data available. Trigger a sync to populate this table.
+          </div>
+        ) : (
+          <div className="border rounded-md overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b">
+                <tr>
+                  <th className="px-3 py-2 font-semibold text-slate-600 w-10">#</th>
+                  <th className="px-3 py-2 font-semibold text-slate-600">Raw Header (from Sheet)</th>
+                  <th className="px-3 py-2 font-semibold text-slate-600">Matched Question</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {diagnostics.detectedHeaders.map((h) => (
+                  <tr key={h.columnIndex} className={h.matchedQuestion ? 'bg-white' : 'bg-slate-50/50'}>
+                    <td className="px-3 py-2 font-mono text-slate-400">{h.columnIndex}</td>
+                    <td className="px-3 py-2 max-w-xs">
+                      <span className="block truncate font-mono text-slate-700" title={h.rawHeader}>
+                        {h.rawHeader.replace(/\r?\n|\r/g, ' ↵ ')}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2">
+                      {h.matchedQuestion ? (
+                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                          {h.matchedQuestion}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 italic">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div className="bg-white rounded-xl border p-6 shadow-sm">
         <h2 className="text-xl font-bold text-slate-900 mb-4">Community Name Management</h2>
         <p className="text-sm text-slate-500 mb-6">

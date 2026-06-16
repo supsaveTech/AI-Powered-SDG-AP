@@ -7,7 +7,13 @@ import { SurveyResponse } from '@/types';
  */
 export function parseCsvData(csvText: string): ParseResult {
   if (!csvText) {
-    return { data: [], validation: { missingHeaders: [], unexpectedHeaders: [], duplicateHeaders: [], isValid: false } };
+    return {
+      data: [],
+      validation: {
+        missingHeaders: [], unexpectedHeaders: [], duplicateHeaders: [],
+        isValid: false, detectedHeaders: [], columnIndexMap: {}
+      }
+    };
   }
   
   // Simple CSV parser that handles basic comma separation and quotes.
