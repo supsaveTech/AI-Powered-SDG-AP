@@ -94,7 +94,7 @@ export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
   const idxCurrentStatus = getIndex(['current status', 'currently doing'], 7);
 
   // Digital Access
-  const idxDevices          = getIndex(['devices do you have regular access to', 'which devices'], 8);
+  const idxDevices          = getIndex(['devices do you have', 'regular access to', 'which devices'], 8);
   const idxInternetRel      = getIndex(['reliable is your internet access', 'internet access'], 9);
   const idxInternetLoc      = getIndex(['where do you mostly access the internet', 'mostly access the internet'], 10);
   const idxElectricityRel   = getIndex(['reliable is electricity in your area', 'electricity in your area'], 11);
@@ -116,10 +116,10 @@ export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
   // Career Awareness
   const idxCareersKnown     = getIndex(['technology careers are you familiar with', 'careers are you familiar'], 22);
   const idxCareerInterest   = getIndex(['consider a career in technology', 'career in technology'], 23);
-  const idxPreferredTechField = getIndex(['technology field interests you the most', 'field interests you the most'], 24);
+  const idxPreferredTechField = getIndex(['technology field interests you', 'field interests you'], 24);
 
   // Employment Readiness
-  const idxWorkType         = getIndex(['type of work are you most interested in', 'work are you most interested'], 25);
+  const idxWorkType         = getIndex(['type of work are you most interested', 'work are you most interested'], 25);
   const idxDesiredSkills    = getIndex(['digital skills would you most like to learn', 'skills would you most like to learn', 'most like to learn'], 26);
 
   // Barriers
@@ -196,11 +196,11 @@ export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
     const val = parseStr(row, idx).toLowerCase();
     return val === 'yes' || val === 'true';
   };
-  // Google Forms exports multi-selects delimited by semicolons
+  // Google Forms exports multi-selects delimited by commas or semicolons
   const parseList = (row: unknown[], idx: number): string[] => {
     const val = parseStr(row, idx);
     if (!val) return [];
-    return val.split(';').map(s => s.trim()).filter(Boolean);
+    return val.split(/[,;]/).map(s => s.trim()).filter(Boolean);
   };
 
   // ─── Row Mapping ─────────────────────────────────────────────────────────────

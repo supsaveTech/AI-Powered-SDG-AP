@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getManualOverrides, setManualOverride, normalizeCommunityNameWithMethod } from "@/utils/communityNormalizer";
 import { ResponsesOverTimeChart } from "@/components/dashboard/ResponsesOverTimeChart";
 import { getResponseGrowthTimeSeries } from "@/utils/dataAggregation";
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, LogOut } from "lucide-react";
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, LogOut, BarChart2 } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
 
 export function AdminDashboard() {
@@ -84,6 +84,20 @@ export function AdminDashboard() {
       setCanonicalName("");
     }
   };
+
+  // Compute diagnostics
+  const totalRespondents = data.length;
+  const smartphoneCount = data.filter(d => d.ownsSmartphone).length;
+  const laptopCount = data.filter(d => d.ownsLaptop).length;
+  const aiUsageCount = data.filter(d => d.hasUsedAI).length;
+  const careerInterestCount = data.filter(d => {
+    const interest = String(d.careerInterest).toLowerCase();
+    return interest.includes('strongly agree') || interest.includes('very interested') || interest.includes('yes') || interest.includes('agree') || interest.includes('interested');
+  }).length;
+  const remoteWorkInterestCount = data.filter(d => {
+    const interest = String(d.interestInRemoteWork).toLowerCase();
+    return interest.includes('agree') || interest.includes('strongly agree') || interest.includes('yes');
+  }).length;
 
   if (!isAuthenticated) {
     return (
@@ -217,6 +231,39 @@ export function AdminDashboard() {
                 </ul>
               </div>
             )}
+          </div>
+
+          <div className="space-y-3 mb-6 border-t pt-4">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 uppercase tracking-wider">
+              <BarChart2 className="w-4 h-4" /> Live Parsed Data Totals
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
+              <div className="bg-slate-50 p-3 rounded border">
+                <div className="text-slate-500 text-xs uppercase mb-1">Total Respondents</div>
+                <div className="text-lg font-bold text-slate-900">{totalRespondents}</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border">
+                <div className="text-slate-500 text-xs uppercase mb-1">Smartphone Owners</div>
+                <div className="text-lg font-bold text-slate-900">{smartphoneCount}</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border">
+                <div className="text-slate-500 text-xs uppercase mb-1">Laptop Owners</div>
+                <div className="text-lg font-bold text-slate-900">{laptopCount}</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border">
+                <div className="text-slate-500 text-xs uppercase mb-1">AI Usage</div>
+                <div className="text-lg font-bold text-slate-900">{aiUsageCount}</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border">
+                <div className="text-slate-500 text-xs uppercase mb-1">Tech Career Interest</div>
+                <div className="text-lg font-bold text-slate-900">{careerInterestCount}</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border">
+                <div className="text-slate-500 text-xs uppercase mb-1">Remote Work Interest</div>
+                <div className="text-lg font-bold text-slate-900">{remoteWorkInterestCount}</div>
+              </div>
+            </div>
           </div>
 
             <div className="flex gap-4">

@@ -298,8 +298,12 @@ function heuristicInsights(pageName: string, ragContext: string): AIInsightSet {
     overview: {
       keyFindings: [
         `${totalStr} youth surveyed across Port Harcourt, revealing a critical digital skills gap with a readiness score of ${skillsScore}/100.`,
-        `Smartphone penetration (${smartphone}%) is dramatically higher than laptop access (${laptop}%), defining a mobile-first digital reality.`,
-        `${topBarrier} is the leading systemic barrier preventing youth from acquiring digital skills needed for decent work.`,
+        smartphone === '0' && laptop === '0' 
+          ? `Insufficient device ownership data available.` 
+          : `Smartphone penetration (${smartphone}%) is dramatically higher than laptop access (${laptop}%), defining a mobile-first digital reality.`,
+        topBarrier === 'Unknown' || !topBarrier
+          ? `Insufficient barrier data available.`
+          : `${topBarrier} is the leading systemic barrier preventing youth from acquiring digital skills needed for decent work.`,
       ],
       trendAnalysis: [
         `Tech career interest (${techInterest}/100) consistently outpaces current skill levels, indicating strong motivation suppressed by structural barriers rather than lack of desire.`,
@@ -349,8 +353,12 @@ function heuristicInsights(pageName: string, ragContext: string): AIInsightSet {
     },
     "digital access": {
       keyFindings: [
-        `Smartphone ownership (${smartphone}%) is near-universal, but laptop access (${laptop}%) creates a significant barrier to practical technical skills development.`,
-        `Only ~${Math.round(parseInt(remote) * 0.7)}% of respondents have consistently reliable internet, limiting online learning potential.`,
+        smartphone === '0' && laptop === '0'
+          ? `Insufficient device ownership data available.`
+          : `Smartphone ownership (${smartphone}%) is near-universal, but laptop access (${laptop}%) creates a significant barrier to practical technical skills development.`,
+        remote === '0' 
+          ? `Insufficient internet reliability data available.`
+          : `Only ~${Math.round(parseInt(remote) * 0.7)}% of respondents have consistently reliable internet, limiting online learning potential.`,
         `Desktop and tablet access are minimal (<25%), confirming smartphones are the primary computing device for most youth.`,
       ],
       trendAnalysis: [
