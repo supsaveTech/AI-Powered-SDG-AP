@@ -9,10 +9,10 @@ export function MockDataBanner() {
   useEffect(() => {
     const checkStatus = () => {
       const status = dataService.getDataStatus();
+      // Only show banner if explicitly using mock data fallback
       setIsMock(status.syncStatus === 'mock');
     };
     checkStatus();
-    // Re-check periodically in case data source changes (e.g. after upload in another tab/component)
     const interval = setInterval(checkStatus, 5000);
     return () => clearInterval(interval);
   }, []);

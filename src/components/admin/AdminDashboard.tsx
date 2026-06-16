@@ -1,46 +1,66 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { dataService, DataStatus } from "@/services/dataService";
+import { dataService, DataDiagnostics } from "@/services/dataService";
 import { getManualOverrides, setManualOverride, normalizeCommunityNameWithMethod } from "@/utils/communityNormalizer";
 import { ResponsesOverTimeChart } from "@/components/dashboard/ResponsesOverTimeChart";
 import { getResponseGrowthTimeSeries } from "@/utils/dataAggregation";
 import { SurveyResponse } from "@/types";
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, LogOut } from "lucide-react";
 
 export function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  const [status, setStatus] = useState<DataStatus | null>(null);
+  const [diagnostics, setDiagnostics] = useState<DataDiagnostics | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [rawName, setRawName] = useState("");
   const [canonicalName, setCanonicalName] = useState("");
   const [data, setData] = useState<SurveyResponse[]>([]);
+  const [showRawResponse, setShowRawResponse] = useState(false);
 
   const loadOverrides = useCallback(() => {
     setOverrides(getManualOverrides());
+  }, []);
+
+  const refreshStatus = useCallback(() => {
+    setDiagnostics(dataService.getDiagnostics());
+    dataService.fetchData().then(setData);
+  }, []);
+
+  useEffect(() => {
+    // Check auth persistence
+    const authFlag = localStorage.getItem("admin_authenticated");
+    if (authFlag === "true") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsAuthenticated(true);
+    }
   }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       loadOverrides();
+      refreshStatus();
     }
-  }, [isAuthenticated, loadOverrides]);
+  }, [isAuthenticated, loadOverrides, refreshStatus]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    // Use an environment variable or secure constant, avoiding hardcoded plaintext if possible, but keeping logic consistent.
     if (password === "sdg2026") {
       setIsAuthenticated(true);
+      localStorage.setItem("admin_authenticated", "true");
       refreshStatus();
     } else {
       alert("Invalid password");
     }
   };
 
-  const refreshStatus = () => {
-    setStatus(dataService.getDataStatus());
-    dataService.fetchData().then(setData);
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem("admin_authenticated");
+    setPassword("");
   };
 
   const handleRefreshData = async () => {
@@ -48,7 +68,7 @@ export function AdminDashboard() {
     await dataService.fetchData(true);
     refreshStatus();
     setIsRefreshing(false);
-    alert("Data refreshed successfully!");
+    alert("Data fetch triggered.");
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,7 +80,7 @@ export function AdminDashboard() {
       const csv = event.target?.result as string;
       const success = await dataService.uploadCsvData(csv);
       if (success) {
-        alert("CSV uploaded and processed successfully.");
+        alert("CSV uploaded, processed, and persisted successfully.");
         refreshStatus();
       } else {
         alert("Failed to process CSV.");
@@ -92,7 +112,7 @@ export function AdminDashboard() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0F172A]"
-                placeholder="Enter admin password"
+                placeholder="Enter password"
               />
             </div>
             <button 
@@ -109,49 +129,119 @@ export function AdminDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin Panel</h1>
-        <p className="text-slate-500 mt-2">Manage data pipelines and system status.</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin Panel</h1>
+          <p className="text-slate-500 mt-2">Manage data pipelines, view diagnostics, and system status.</p>
+        </div>
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-md text-sm font-medium hover:bg-slate-50"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="bg-white rounded-xl border p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">Data Status</h2>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-slate-600">Total Records</span>
-              <span className="font-medium">{status?.totalResponses || 0}</span>
+        {/* DIAGNOSTICS LAYER */}
+        <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
+          <h2 className="text-xl font-bold text-slate-900 mb-4">Google Sheets Diagnostics</h2>
+          
+          <div className="space-y-3 mb-6">
+            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Environment Variables</h3>
+            <div className="flex justify-between items-center text-sm">
+              <span className="font-mono text-slate-600 truncate mr-2">NEXT_PUBLIC_GOOGLE_SHEETS_API_KEY</span>
+              {diagnostics?.envApiKey ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
             </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-slate-600">Last Sync Time</span>
-              <span className="font-medium">{status?.syncTime ? new Date(status.syncTime).toLocaleString() : 'Never'}</span>
+            <div className="flex justify-between items-center text-sm">
+              <span className="font-mono text-slate-600 truncate mr-2">..._SPREADSHEET_ID</span>
+              {diagnostics?.envSheetId ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
             </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-slate-600">Live Connection</span>
-              <span className={`font-medium ${status?.isConnected ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {status?.isConnected ? 'Connected to Google Sheets' : 'Using Mock/CSV Data'}
+            <div className="flex justify-between items-center text-sm">
+              <span className="font-mono text-slate-600 truncate mr-2">NEXT_PUBLIC_GOOGLE_SHEETS_CSV_URL</span>
+              {diagnostics?.envCsvUrl ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
+            </div>
+          </div>
+
+          <div className="space-y-3 mb-6 border-t pt-4">
+            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Data Source Inspector</h3>
+            
+            <div className="flex justify-between text-sm py-1 border-b border-slate-100">
+              <span className="text-slate-500">Current Source</span>
+              <span className="font-medium">{diagnostics?.source || 'None'}</span>
+            </div>
+            
+            <div className="flex justify-between text-sm py-1 border-b border-slate-100">
+              <span className="text-slate-500">Spreadsheet ID</span>
+              <span className="font-mono text-xs">{diagnostics?.spreadsheetId ? `${diagnostics.spreadsheetId.substring(0, 8)}...` : 'N/A'}</span>
+            </div>
+            
+            <div className="flex justify-between text-sm py-1 border-b border-slate-100">
+              <span className="text-slate-500">Range Requested</span>
+              <span className="font-mono text-xs">{diagnostics?.requestedRange || 'N/A'}</span>
+            </div>
+            
+            <div className="flex justify-between text-sm py-1 border-b border-slate-100">
+              <span className="text-slate-500">Last Request URL</span>
+              <span className="font-mono text-xs truncate max-w-[150px]">{diagnostics?.requestUrl || 'N/A'}</span>
+            </div>
+            
+            <div className="flex justify-between text-sm py-1 border-b border-slate-100">
+              <span className="text-slate-500">HTTP Status</span>
+              <span className={`font-mono text-xs ${diagnostics?.httpStatus === 200 ? 'text-emerald-600' : 'text-red-600'}`}>
+                {diagnostics?.httpStatus || 'N/A'}
+              </span>
+            </div>
+            
+            <div className="flex justify-between text-sm py-1 border-b border-slate-100">
+              <span className="text-slate-500">Rows Returned</span>
+              <span className="font-medium">{diagnostics?.rowsReturned || 0}</span>
+            </div>
+
+            <div className="flex justify-between text-sm py-1">
+              <span className="text-slate-500">Last Error</span>
+              <span className="font-medium text-red-500 text-right max-w-[200px] truncate" title={diagnostics?.errorMessage || ''}>
+                {diagnostics?.errorMessage || 'None'}
               </span>
             </div>
           </div>
-          
-          <div className="mt-6">
+
+          <div className="mt-auto">
             <button 
               onClick={handleRefreshData}
               disabled={isRefreshing}
               className="w-full bg-[#0F172A] text-white rounded-md py-2 font-medium hover:bg-slate-800 transition-colors disabled:bg-slate-400"
             >
-              {isRefreshing ? 'Refreshing...' : 'Refresh Google Sheets Data'}
+              {isRefreshing ? 'Fetching...' : 'Trigger Sync'}
             </button>
+          </div>
+
+          <div className="mt-4 border border-slate-200 rounded-md overflow-hidden">
+            <button 
+              onClick={() => setShowRawResponse(!showRawResponse)}
+              className="w-full flex justify-between items-center px-4 py-2 bg-slate-50 hover:bg-slate-100 text-sm font-medium text-slate-700"
+            >
+              Raw API Response Preview
+              {showRawResponse ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            {showRawResponse && (
+              <div className="p-4 bg-slate-900 text-slate-300 font-mono text-xs whitespace-pre-wrap overflow-x-auto max-h-48">
+                {diagnostics?.rawResponsePreview || "No response available."}
+              </div>
+            )}
           </div>
         </div>
 
+        {/* CSV FALLBACK */}
         <div className="bg-white rounded-xl border p-6 shadow-sm">
           <h2 className="text-xl font-bold text-slate-900 mb-4">CSV Upload Fallback</h2>
           <p className="text-sm text-slate-500 mb-6">
-            If the Google Sheets connection fails, you can manually upload the exported CSV from Google Forms to update the dashboard.
+            If Google Sheets connectivity fails completely, you can manually upload the exported CSV. 
+            <strong> The CSV data will be saved locally and survive page refreshes.</strong>
           </p>
           
-          <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
+          <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative mb-6">
             <input 
               type="file" 
               accept=".csv"
@@ -164,9 +254,17 @@ export function AdminDashboard() {
             <span className="text-sm font-medium text-slate-900">Click to upload CSV</span>
             <p className="text-xs text-slate-500 mt-1">or drag and drop</p>
           </div>
+          
+          <div className="bg-blue-50 border border-blue-100 p-4 rounded-md">
+             <h4 className="text-sm font-semibold text-blue-900 mb-1">Local Storage Cache</h4>
+             <p className="text-xs text-blue-800">
+               If a CSV is uploaded, it is cached in the browser. It will be used immediately if live connections fail.
+             </p>
+          </div>
         </div>
       </div>
 
+      {/* MONITORING & COMMUNITY CONFIG... */}
       <div className="bg-white rounded-xl border p-6 shadow-sm">
         <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between">
           <div>

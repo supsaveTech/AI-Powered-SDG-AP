@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { dataService, SyncStatus } from "@/services/dataService";
-import { Cloud, CloudOff, RefreshCw, UploadCloud, Database } from "lucide-react";
+import { Cloud, CloudOff, RefreshCw, UploadCloud, Database, AlertCircle } from "lucide-react";
 
 export function SyncStatusBar() {
   const [status, setStatus] = useState<{
@@ -10,6 +10,7 @@ export function SyncStatusBar() {
     syncTime: Date | null;
     syncStatus: SyncStatus;
     totalResponses: number;
+    errorMessage?: string | null;
   }>({
     isConnected: false,
     syncTime: null,
@@ -18,40 +19,51 @@ export function SyncStatusBar() {
   });
 
   useEffect(() => {
-    // Basic polling or just initial fetch to get status
     const updateStatus = () => {
-      setStatus(dataService.getDataStatus());
+      const dataStatus = dataService.getDataStatus();
+      const diagnostics = dataService.getDiagnostics();
+      setStatus({
+        ...dataStatus,
+        errorMessage: diagnostics.errorMessage
+      });
     };
     
     updateStatus();
-    
-    // Poll every 30 seconds for visual updates
     const interval = setInterval(updateStatus, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  const getStatusIcon = () => {
+  const getStatusConfig = () => {
     switch(status.syncStatus) {
-      case 'sheets-api':
-        return <Cloud className="w-4 h-4 text-emerald-500" />;
-      case 'sheets-csv':
-        return <Cloud className="w-4 h-4 text-blue-500" />;
+      case 'live':
+        return { icon: <Cloud className="w-4 h-4 text-emerald-500" />, text: 'Live Google Sheets Sync', colorClass: 'text-slate-700' };
+      case 'csv':
+        return { icon: <Cloud className="w-4 h-4 text-blue-500" />, text: 'Live Google Sheets (CSV)', colorClass: 'text-slate-700' };
       case 'uploaded-csv':
-        return <UploadCloud className="w-4 h-4 text-purple-500" />;
+        return { icon: <UploadCloud className="w-4 h-4 text-purple-500" />, text: 'Using Uploaded CSV', colorClass: 'text-slate-700' };
+      case 'cached-csv':
+        return { icon: <UploadCloud className="w-4 h-4 text-purple-500" />, text: 'Using Cached CSV', colorClass: 'text-slate-700' };
       case 'mock':
-        return <Database className="w-4 h-4 text-orange-500" />;
+        return { icon: <Database className="w-4 h-4 text-orange-500" />, text: 'Using Mock Data', colorClass: 'text-slate-700' };
+      
+      // Error States
+      case 'error-auth':
+        return { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'Google Sheets Error: Invalid API Key', colorClass: 'text-red-600 font-semibold' };
+      case 'error-permission':
+        return { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'Google Sheets Error: Permission Denied', colorClass: 'text-red-600 font-semibold' };
+      case 'error-not-found':
+        return { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'Google Sheets Error: Spreadsheet Not Found', colorClass: 'text-red-600 font-semibold' };
+      case 'error-invalid-range':
+        return { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'Google Sheets Error: Invalid Range', colorClass: 'text-red-600 font-semibold' };
+      case 'error-parser':
+        return { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'Google Sheets Error: Parser Failed', colorClass: 'text-red-600 font-semibold' };
+      case 'error-network':
+        return { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'Google Sheets Error: Network/HTTP Failure', colorClass: 'text-red-600 font-semibold' };
+      case 'error-env':
+        return { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'Google Sheets Error: Missing Configuration', colorClass: 'text-red-600 font-semibold' };
+      
       default:
-        return <CloudOff className="w-4 h-4 text-slate-400" />;
-    }
-  };
-
-  const getStatusText = () => {
-    switch(status.syncStatus) {
-      case 'sheets-api': return 'Live Google Sheets';
-      case 'sheets-csv': return 'Live Google Sheets';
-      case 'uploaded-csv': return 'Uploaded CSV';
-      case 'mock': return 'Mock Data';
-      default: return 'Offline';
+        return { icon: <CloudOff className="w-4 h-4 text-slate-400" />, text: 'Offline', colorClass: 'text-slate-500' };
     }
   };
 
@@ -64,11 +76,13 @@ export function SyncStatusBar() {
     return `${Math.floor(seconds / 86400)}d ago`;
   };
 
+  const config = getStatusConfig();
+
   return (
     <div className="flex items-center gap-4 text-sm font-medium bg-white border border-slate-200 rounded-full px-4 py-1.5 shadow-sm">
-      <div className="flex items-center gap-2" title={`Data Source: ${getStatusText()}`}>
-        {getStatusIcon()}
-        <span className="text-slate-700 hidden sm:inline">{getStatusText()}</span>
+      <div className="flex items-center gap-2" title={status.errorMessage ? `Error: ${status.errorMessage}` : `Data Source: ${config.text}`}>
+        {config.icon}
+        <span className={`hidden sm:inline ${config.colorClass}`}>{config.text}</span>
       </div>
       <div className="w-px h-4 bg-slate-200"></div>
       <div className="flex items-center gap-2 text-slate-500">
