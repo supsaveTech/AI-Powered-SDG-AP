@@ -1,16 +1,48 @@
-import { dataService } from "@/services/dataService";
+"use client";
+
+import { useData } from "@/contexts/DataContext";
 import { BarChartWrapper } from "@/components/charts/BarChartWrapper";
 import { PieChartWrapper } from "@/components/charts/PieChartWrapper";
-import { calculateDigitalSkillsReadiness, calculateAverage } from "@/utils/dataAggregation";
+import { calculateAverage, calculateDigitalSkillsReadiness } from "@/utils/dataAggregation";
 import { AIInsights } from "@/components/ai/AIInsights";
 import DataSourceTag from "@/components/ui/DataSourceTag";
 import IndexMethodologyPanel from "@/components/ui/IndexMethodologyPanel";
-import { Laptop } from "lucide-react";
+import { Laptop, AlertCircle } from "lucide-react";
 
-export default async function DigitalSkillsPage() {
-  const data = await dataService.fetchData();
+export default function DigitalSkillsPage() {
+  const { data, analytics, isInitializing } = useData();
 
-  // Legacy skill scores (from scale 1-5 questions if available)
+  if (isInitializing) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0F172A]"></div>
+      </div>
+    );
+  }
+
+  if (!data || data.length === 0 || !analytics) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Digital Skills Readiness</h1>
+          <p className="text-slate-500 mt-2">Evaluation of proficiency in word processing, spreadsheets, presentations, and email.</p>
+        </div>
+        <div className="bg-white rounded-xl border border-amber-200 p-8 shadow-sm text-center flex flex-col items-center justify-center min-h-[400px]">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+            <AlertCircle className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">No Survey Data Available</h2>
+          <p className="text-slate-500 max-w-md mx-auto mb-6">
+            The platform is not currently connected to a valid Google Sheets data source, and no CSV data has been uploaded. 
+          </p>
+          <a href="/admin" className="px-6 py-2 bg-[#0F172A] text-white rounded-md font-medium hover:bg-slate-800 transition-colors">
+            Go to Admin Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   const skillsData = [
     { name: 'Word', score: calculateAverage(data.map(d => d.skillMicrosoftWord)) },
     { name: 'Excel', score: calculateAverage(data.map(d => d.skillExcel)) },

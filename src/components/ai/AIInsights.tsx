@@ -1,21 +1,54 @@
-import { generatePageInsights, AIInsightSet } from "@/services/aiService";
-import { buildPageContext } from "@/utils/ragContextBuilder";
-import { SurveyResponse } from "@/types";
-import { 
-  Lightbulb, 
-  TrendingUp, 
-  Zap, 
-  Target, 
-  Bot
-} from "lucide-react";
+"use client";
+
+import { useState, useEffect } from 'react';
+import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, AlertCircle, Bot, Zap, Target } from 'lucide-react';
+import { SurveyResponse } from '@/types';
+import { AIInsightSet } from '@/services/aiService';
 
 interface AIInsightsProps {
-  data: SurveyResponse[];
   pageName: string;
+  data: SurveyResponse[];
 }
 
-export async function AIInsights({ data, pageName }: AIInsightsProps) {
-  if (!data || data.length === 0) {
+export function AIInsights({ pageName, data }: AIInsightsProps) {
+  const [insights, setInsights] = useState<AIInsightSet | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchInsights() {
+      if (!data || data.length === 0) {
+        setError("No survey data available. Connect Google Sheets or upload a CSV to generate AI insights.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const res = await fetch('/api/insights', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pageName, data })
+        });
+        
+        if (!res.ok) {
+          const result = await res.json();
+          throw new Error(result.error || "Failed to fetch insights");
+        }
+        
+        const result = await res.json();
+        setInsights(result.insights);
+      } catch (e: any) {
+        setError(e.message || "Failed to load AI insights.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchInsights();
+  }, [data, pageName]);
+
+  if (!data || data.length === 0 || error === "No survey data available. Connect Google Sheets or upload a CSV to generate AI insights.") {
     return (
       <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 mb-3">
@@ -29,8 +62,17 @@ export async function AIInsights({ data, pageName }: AIInsightsProps) {
     );
   }
 
-  const ragContext = buildPageContext(data, pageName);
-  const insights: AIInsightSet = await generatePageInsights(pageName, ragContext);
+  if (loading || !insights) {
+    return (
+      <div className="mt-8 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm animate-pulse">
+        <div className="h-10 bg-slate-200 rounded-lg mb-6"></div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="h-32 bg-slate-100 rounded-lg"></div>
+          <div className="h-32 bg-slate-100 rounded-lg"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-8 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white overflow-hidden shadow-sm">

@@ -43,8 +43,7 @@ export function SyncStatusBar() {
         return { icon: <UploadCloud className="w-4 h-4 text-purple-500" />, text: 'Using Uploaded CSV', colorClass: 'text-slate-700' };
       case 'cached-csv':
         return { icon: <UploadCloud className="w-4 h-4 text-purple-500" />, text: 'Using Cached CSV', colorClass: 'text-slate-700' };
-      case 'mock':
-        return { icon: <Database className="w-4 h-4 text-orange-500" />, text: 'Using Mock Data', colorClass: 'text-slate-700' };
+
       
       // Error States
       case 'error-auth':

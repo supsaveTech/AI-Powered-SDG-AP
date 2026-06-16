@@ -1,31 +1,23 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { dataService, DataDiagnostics } from "@/services/dataService";
 import { getManualOverrides, setManualOverride, normalizeCommunityNameWithMethod } from "@/utils/communityNormalizer";
 import { ResponsesOverTimeChart } from "@/components/dashboard/ResponsesOverTimeChart";
 import { getResponseGrowthTimeSeries } from "@/utils/dataAggregation";
-import { SurveyResponse } from "@/types";
 import { CheckCircle2, XCircle, ChevronDown, ChevronUp, LogOut } from "lucide-react";
+import { useData } from "@/contexts/DataContext";
 
 export function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  const [diagnostics, setDiagnostics] = useState<DataDiagnostics | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { data, diagnostics, refreshData, uploadCsv, isSyncing } = useData();
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [rawName, setRawName] = useState("");
   const [canonicalName, setCanonicalName] = useState("");
-  const [data, setData] = useState<SurveyResponse[]>([]);
   const [showRawResponse, setShowRawResponse] = useState(false);
 
   const loadOverrides = useCallback(() => {
     setOverrides(getManualOverrides());
-  }, []);
-
-  const refreshStatus = useCallback(() => {
-    setDiagnostics(dataService.getDiagnostics());
-    dataService.fetchData().then(setData);
   }, []);
 
   useEffect(() => {
@@ -41,17 +33,15 @@ export function AdminDashboard() {
     if (isAuthenticated) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       loadOverrides();
-      refreshStatus();
     }
-  }, [isAuthenticated, loadOverrides, refreshStatus]);
+  }, [isAuthenticated, loadOverrides]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Use an environment variable or secure constant, avoiding hardcoded plaintext if possible, but keeping logic consistent.
     if (password === "sdg2026") {
       setIsAuthenticated(true);
       localStorage.setItem("admin_authenticated", "true");
-      refreshStatus();
+      refreshData();
     } else {
       alert("Invalid password");
     }
@@ -64,11 +54,8 @@ export function AdminDashboard() {
   };
 
   const handleRefreshData = async () => {
-    setIsRefreshing(true);
-    await dataService.fetchData(true);
-    refreshStatus();
-    setIsRefreshing(false);
-    alert("Data fetch triggered.");
+    await refreshData(true);
+    alert("Data fetch triggered and globally synced.");
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,10 +65,9 @@ export function AdminDashboard() {
     const reader = new FileReader();
     reader.onload = async (event) => {
       const csv = event.target?.result as string;
-      const success = await dataService.uploadCsvData(csv);
+      const success = await uploadCsv(csv);
       if (success) {
-        alert("CSV uploaded, processed, and persisted successfully.");
-        refreshStatus();
+        alert("CSV uploaded, processed, and globally synced successfully.");
       } else {
         alert("Failed to process CSV.");
       }
@@ -207,15 +193,15 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          <div className="mt-auto">
-            <button 
-              onClick={handleRefreshData}
-              disabled={isRefreshing}
-              className="w-full bg-[#0F172A] text-white rounded-md py-2 font-medium hover:bg-slate-800 transition-colors disabled:bg-slate-400"
-            >
-              {isRefreshing ? 'Fetching...' : 'Trigger Sync'}
-            </button>
-          </div>
+            <div className="flex gap-4">
+              <button
+                onClick={handleRefreshData}
+                disabled={isSyncing}
+                className="flex-1 bg-[#0F172A] text-white py-2 rounded-md font-medium hover:bg-slate-800 disabled:opacity-50 transition-colors"
+              >
+                {isSyncing ? "Syncing..." : "Trigger Sync"}
+              </button>
+            </div>
 
           <div className="mt-4 border border-slate-200 rounded-md overflow-hidden">
             <button 
@@ -322,7 +308,7 @@ export function AdminDashboard() {
           </button>
         </form>
 
-        <div className="border rounded-md overflow-hidden">
+        <div className="border rounded-md overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 border-b">
               <tr>

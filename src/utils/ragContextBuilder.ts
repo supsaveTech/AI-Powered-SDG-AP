@@ -1,5 +1,4 @@
 import { SurveyResponse } from "../types";
-import { dataService } from "@/services/dataService";
 import {
   calculateDigitalSkillsReadiness,
   calculateCareerAwarenessScore,
@@ -41,10 +40,7 @@ export function buildRAGContext(data: SurveyResponse[]): string {
     .filter(i => i.name.toLowerCase().includes('good') || i.name.toLowerCase().includes('excellent'))
     .reduce((acc, curr) => acc + curr.value, 0) / total * 100;
 
-  const status = dataService.getDataStatus().syncStatus;
-  const notice = status === 'mock' 
-    ? "The following observations are generated from demonstration data and should not be interpreted as actual survey findings."
-    : "Based on responses collected from youths in Port Harcourt...";
+  const notice = "Based on responses collected from youths in Port Harcourt...";
 
   // --- Build context string ---
   const context = `

@@ -350,3 +350,17 @@ export const getAccessMetrics = (data: SurveyResponse[]) => {
     internetReliability: Object.entries(internetReliabilityDist).map(([name, value]) => ({ name, value }))
   };
 };
+
+/**
+ * Alias for calculateBarrierSeverity — returns barriers ranked by severity.
+ * Used by: barriers/page.tsx, recommendations/page.tsx, DataContext.tsx
+ */
+export const getBarrierMetrics = calculateBarrierSeverity;
+
+/**
+ * Alias for calculateCareerAwarenessScore — returns the score as a number.
+ * Used by: career-awareness/page.tsx
+ */
+export const getCareerAwarenessMetrics = (data: SurveyResponse[]) => ({
+  score: calculateCareerAwarenessScore(data)
+});

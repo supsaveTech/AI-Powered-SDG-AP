@@ -1,14 +1,46 @@
-import { dataService } from "@/services/dataService";
+"use client";
+
+import { useData } from "@/contexts/DataContext";
 import { PieChartWrapper } from "@/components/charts/PieChartWrapper";
 import { BarChartWrapper } from "@/components/charts/BarChartWrapper";
 import { AIInsights } from "@/components/ai/AIInsights";
-import { calculateEmploymentReadiness } from "@/utils/dataAggregation";
 import DataSourceTag from "@/components/ui/DataSourceTag";
 import IndexMethodologyPanel from "@/components/ui/IndexMethodologyPanel";
-import { Briefcase } from "lucide-react";
+import { Briefcase, AlertCircle } from "lucide-react";
 
-export default async function EmploymentReadinessPage() {
-  const data = await dataService.fetchData();
+export default function EmploymentReadinessPage() {
+  const { data, analytics, isInitializing } = useData();
+
+  if (isInitializing) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0F172A]"></div>
+      </div>
+    );
+  }
+
+  if (!data || data.length === 0 || !analytics) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Employment Readiness</h1>
+          <p className="text-slate-500 mt-2">Preferences for remote work, specialized fields, and overall job market preparedness.</p>
+        </div>
+        <div className="bg-white rounded-xl border border-amber-200 p-8 shadow-sm text-center flex flex-col items-center justify-center min-h-[400px]">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+            <AlertCircle className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">No Survey Data Available</h2>
+          <p className="text-slate-500 max-w-md mx-auto mb-6">
+            The platform is not currently connected to a valid Google Sheets data source, and no CSV data has been uploaded. 
+          </p>
+          <a href="/admin" className="px-6 py-2 bg-[#0F172A] text-white rounded-md font-medium hover:bg-slate-800 transition-colors">
+            Go to Admin Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   const remoteWorkDist = data.reduce((acc, curr) => {
     if (curr.interestInRemoteWork) acc[curr.interestInRemoteWork] = (acc[curr.interestInRemoteWork] || 0) + 1;
@@ -36,7 +68,7 @@ export default async function EmploymentReadinessPage() {
   }, {} as Record<string, number>);
   const topSkillsData = Object.entries(topSkillsDist).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
-  const readinessScore = Math.round(calculateEmploymentReadiness(data));
+  const readinessScore = analytics.employmentReadinessIndex;
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,5 +1,4 @@
 import { SurveyResponse } from '../types';
-import { mockSurveyData } from '../data/mockData';
 import { parseGoogleSheetsData } from './googleSheetsParser';
 import { parseCsvData } from './csvParser';
 
@@ -9,7 +8,6 @@ export type SyncStatus =
   | 'uploaded-csv'
   | 'cached-csv'
   | 'cached-sheets'
-  | 'mock' 
   | 'offline'
   | 'error-auth'
   | 'error-permission'
@@ -210,17 +208,15 @@ export class DataService {
       return this.data;
     }
 
-    // 4. No configuration at all → error-env, then last resort mock
+    // 4. No configuration at all → error-env
     if (!apiKey && !sheetId && !csvUrl) {
       this.syncStatus = 'error-env';
       this.errorMessage = 'No data source configured. Set NEXT_PUBLIC_GOOGLE_SHEETS_API_KEY and SPREADSHEET_ID.';
       this.source = 'None';
-      this.log('[Fetch] error-env: no env vars set. Loading mock data as last resort.');
-      this.data = mockSurveyData;
-      this.syncStatus = 'mock';
-      this.source = 'Mock Data';
+      this.log('[Fetch] error-env: no env vars set. Returning empty data.');
+      this.data = [];
       this.lastUpdated = new Date();
-      this.rowsReturned = this.data.length;
+      this.rowsReturned = 0;
     }
 
     return this.data;

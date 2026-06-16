@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
 import { AIChatbot } from "@/components/ai/AIChatbot";
+import { DataProvider } from "@/contexts/DataContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,10 +20,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased bg-slate-50`}>
-        <div className="flex min-h-screen">
-          <LayoutWrapper>{children}</LayoutWrapper>
-        </div>
-        <AIChatbot />
+        <DataProvider>
+          <div className="flex min-h-screen">
+            <LayoutWrapper>{children}</LayoutWrapper>
+          </div>
+          <AIChatbot />
+        </DataProvider>
       </body>
     </html>
   );

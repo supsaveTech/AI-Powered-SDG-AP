@@ -1,44 +1,49 @@
+"use client";
+
 import { ImpactCounters } from "@/components/dashboard/ImpactCounters";
-import { dataService } from "@/services/dataService";
-import { 
-  calculateDigitalSkillsReadiness, 
-  calculateCareerAwarenessScore, 
-  calculateEmploymentReadiness,
-  calculateAIReadinessIndex,
-  calculateDigitalAccessIndex,
-  getAIAwarenessMetrics
-} from "@/utils/dataAggregation";
+import { useData } from "@/contexts/DataContext";
 import { generateInsights } from "@/utils/insightEngine";
 import { ExportReportButton } from "@/components/dashboard/ExportReportButton";
 import { ReportGenerator } from "@/components/ai/ReportGenerator";
 import { AIInsights } from "@/components/ai/AIInsights";
 import IndexMethodologyPanel from "@/components/ui/IndexMethodologyPanel";
+import { AlertCircle } from "lucide-react";
 
-export default async function OverviewPage() {
-  // Fetch data
-  const data = await dataService.fetchData();
 
-  // Calculate high-level KPIs
-  const totalRespondents = data.length;
-  const uniqueLocations = new Set(data.map(d => d.location)).size;
+export default function OverviewPage() {
+  const { data, analytics, isInitializing } = useData();
 
-  // New KPIs for Impact Counters
-  const aiAdoptionRate = getAIAwarenessMetrics(data).aiAdoptionRate;
-  
-  // Remote Work Interest (% who Agree or Strongly Agree)
-  const remoteInterestCount = data.filter(d => {
-    const interest = String(d.interestInRemoteWork).toLowerCase();
-    return interest.includes('agree') || interest.includes('strongly agree') || interest.includes('yes');
-  }).length;
-  const remoteWorkInterest = Math.round((remoteInterestCount / (totalRespondents || 1)) * 100);
+  if (isInitializing) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0F172A]"></div>
+      </div>
+    );
+  }
 
-  // Scores
-  const digitalSkillsScore = Math.round(calculateDigitalSkillsReadiness(data));
-  const techInterestScore = Math.round(calculateCareerAwarenessScore(data));
-  const employmentReadinessScore = Math.round(calculateEmploymentReadiness(data));
-  const aiReadinessScore = Math.round(calculateAIReadinessIndex(data));
-  const digitalAccessScore = Math.round(calculateDigitalAccessIndex(data));
-  
+  if (!data || data.length === 0 || !analytics) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Project Overview</h1>
+          <p className="text-slate-500 mt-2">Mapping Youth Readiness and Digital Career Awareness in Port Harcourt.</p>
+        </div>
+        <div className="bg-white rounded-xl border border-amber-200 p-8 shadow-sm text-center flex flex-col items-center justify-center min-h-[400px]">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+            <AlertCircle className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">No Survey Data Available</h2>
+          <p className="text-slate-500 max-w-md mx-auto mb-6">
+            The platform is not currently connected to a valid Google Sheets data source, and no CSV data has been uploaded. 
+          </p>
+          <a href="/admin" className="px-6 py-2 bg-[#0F172A] text-white rounded-md font-medium hover:bg-slate-800 transition-colors">
+            Go to Admin Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   const dynamicInsights = generateInsights(data);
 
   return (
@@ -56,11 +61,11 @@ export default async function OverviewPage() {
         </div>
       </div>
 
-      <ImpactCounters
-        totalRespondents={totalRespondents}
-        communitiesReached={uniqueLocations}
-        aiAdoptionRate={aiAdoptionRate}
-        remoteWorkInterest={remoteWorkInterest}
+      <ImpactCounters 
+        totalRespondents={analytics.totalRespondents}
+        communitiesReached={analytics.communitiesReached}
+        aiAdoptionRate={analytics.aiAdoptionRate}
+        remoteWorkInterest={analytics.remoteWorkInterest}
         sdgsSupported={2} // SDG 8 & 9
       />
 
@@ -68,11 +73,10 @@ export default async function OverviewPage() {
         <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
           <h3 className="text-sm font-medium text-slate-500 mb-2">Digital Access Index</h3>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-[#0F172A]">{digitalAccessScore}</span>
-            <span className="text-sm text-slate-500">/ 100</span>
+            <div className="text-3xl font-bold text-slate-900 mt-2">{analytics.digitalAccessIndex}<span className="text-sm font-normal text-slate-500">/100</span></div>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
-            <div className="bg-[#0F172A] h-full rounded-full" style={{ width: `${digitalAccessScore}%` }}></div>
+            <div className="bg-[#0F172A] h-full rounded-full" style={{ width: `${analytics.digitalAccessIndex}%` }}></div>
           </div>
           <div className="mt-auto pt-4">
             <IndexMethodologyPanel methodologyKey="digitalAccess" />
@@ -82,11 +86,10 @@ export default async function OverviewPage() {
         <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
           <h3 className="text-sm font-medium text-slate-500 mb-2">Digital Skills Readiness</h3>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-[#FD6925]">{digitalSkillsScore}</span>
-            <span className="text-sm text-slate-500">/ 100</span>
+            <div className="text-3xl font-bold text-slate-900 mt-2">{analytics.digitalSkillsReadiness}<span className="text-sm font-normal text-slate-500">/100</span></div>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
-            <div className="bg-[#FD6925] h-full rounded-full" style={{ width: `${digitalSkillsScore}%` }}></div>
+            <div className="bg-[#FD6925] h-full rounded-full" style={{ width: `${analytics.digitalSkillsReadiness}%` }}></div>
           </div>
           <div className="mt-auto pt-4">
             <IndexMethodologyPanel methodologyKey="digitalSkills" />
@@ -96,11 +99,10 @@ export default async function OverviewPage() {
         <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
           <h3 className="text-sm font-medium text-slate-500 mb-2">AI Readiness Index</h3>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-[#8F1838]">{aiReadinessScore}</span>
-            <span className="text-sm text-slate-500">/ 100</span>
+            <div className="text-3xl font-bold text-slate-900 mt-2">{analytics.aiReadinessIndex}<span className="text-sm font-normal text-slate-500">/100</span></div>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
-            <div className="bg-[#8F1838] h-full rounded-full" style={{ width: `${aiReadinessScore}%` }}></div>
+            <div className="bg-[#8F1838] h-full rounded-full" style={{ width: `${analytics.aiReadinessIndex}%` }}></div>
           </div>
           <div className="mt-auto pt-4">
             <IndexMethodologyPanel methodologyKey="aiReadiness" />
@@ -110,11 +112,10 @@ export default async function OverviewPage() {
         <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
           <h3 className="text-sm font-medium text-slate-500 mb-2">Career Awareness Score</h3>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-emerald-700">{techInterestScore}</span>
-            <span className="text-sm text-slate-500">/ 100</span>
+            <div className="text-3xl font-bold text-slate-900 mt-2">{analytics.careerAwarenessScore}<span className="text-sm font-normal text-slate-500">/100</span></div>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
-            <div className="bg-emerald-700 h-full rounded-full" style={{ width: `${techInterestScore}%` }}></div>
+            <div className="bg-emerald-700 h-full rounded-full" style={{ width: `${analytics.careerAwarenessScore}%` }}></div>
           </div>
           <div className="mt-auto pt-4">
             <IndexMethodologyPanel methodologyKey="careerAwareness" />
@@ -124,11 +125,10 @@ export default async function OverviewPage() {
         <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
           <h3 className="text-sm font-medium text-slate-500 mb-2">Employment Readiness</h3>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-blue-700">{employmentReadinessScore}</span>
-            <span className="text-sm text-slate-500">/ 100</span>
+            <div className="text-3xl font-bold text-slate-900 mt-2">{analytics.employmentReadinessIndex}<span className="text-sm font-normal text-slate-500">/100</span></div>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
-            <div className="bg-blue-700 h-full rounded-full" style={{ width: `${employmentReadinessScore}%` }}></div>
+            <div className="bg-blue-700 h-full rounded-full" style={{ width: `${analytics.employmentReadinessIndex}%` }}></div>
           </div>
           <div className="mt-auto pt-4">
             <IndexMethodologyPanel methodologyKey="employmentReadiness" />

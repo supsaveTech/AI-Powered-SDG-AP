@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { MessageCircle, X, Send, Bot, User } from "lucide-react";
+import { useData } from "@/contexts/DataContext";
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -16,6 +17,7 @@ export function AIChatbot() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { data } = useData();
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -40,7 +42,8 @@ export function AIChatbot() {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const newMessages: Message[] = [...messages, { role: "user", content: input }];
+    const userMessage: Message = { role: "user", content: input };
+    const newMessages: Message[] = [...messages, userMessage];
     setMessages(newMessages);
     setInput("");
     setIsLoading(true);
@@ -49,13 +52,16 @@ export function AIChatbot() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ 
+            messages: newMessages,
+            data 
+        }),
       });
 
       if (!response.ok) throw new Error("Failed to fetch response");
 
-      const data = await response.json();
-      setMessages((prev) => [...prev, data]);
+      const responseData = await response.json();
+      setMessages((prev) => [...prev, responseData]);
     } catch (error) {
       console.error(error);
       setMessages((prev) => [
