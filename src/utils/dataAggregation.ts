@@ -232,7 +232,11 @@ export const getInfrastructureMetrics = (data: SurveyResponse[]) => {
   }, {} as Record<string, number>);
 
   const internetLocDist = data.reduce((acc, curr) => {
-    if (curr.internetAccessLocation) acc[curr.internetAccessLocation] = (acc[curr.internetAccessLocation] || 0) + 1;
+    if (curr.internetAccessLocation) {
+      curr.internetAccessLocation.split(';').map(s => s.trim()).filter(Boolean).forEach(loc => {
+        acc[loc] = (acc[loc] || 0) + 1;
+      });
+    }
     return acc;
   }, {} as Record<string, number>);
 

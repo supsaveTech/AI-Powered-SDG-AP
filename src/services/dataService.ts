@@ -1,5 +1,5 @@
 import { SurveyResponse } from '../types';
-import { parseGoogleSheetsData } from './googleSheetsParser';
+import { parseGoogleSheetsData, HeaderValidationResult } from './googleSheetsParser';
 import { parseCsvData } from './csvParser';
 
 export type SyncStatus = 
@@ -33,6 +33,7 @@ export interface DataDiagnostics {
   envCsvUrl: boolean;
   restoredFromCache: boolean;
   startupLog: string[];
+  headerValidation: HeaderValidationResult | null;
 }
 
 export interface DataStatus {
@@ -46,6 +47,7 @@ const SHEETS_CACHE_KEY = 'sheets_data_cache';
 const SHEETS_CACHE_META_KEY = 'sheets_data_cache_meta';
 const CSV_DATA_KEY = 'uploaded_csv_data';
 const CSV_TIMESTAMP_KEY = 'uploaded_csv_timestamp';
+const VALIDATION_CACHE_KEY = 'sheets_validation_cache';
 
 export class DataService {
   private static instance: DataService;
@@ -64,6 +66,7 @@ export class DataService {
   private rawResponsePreview: string | null = null;
   private restoredFromCache: boolean = false;
   private startupLog: string[] = [];
+  private headerValidation: HeaderValidationResult | null = null;
 
   private constructor() {
     this.log('[Startup] DataService initializing...');
@@ -92,6 +95,12 @@ export class DataService {
       this.log('[Startup] Server-side: skipping localStorage restore.');
       return;
     }
+
+    // Try restoring validation
+    try {
+      const vCache = localStorage.getItem(VALIDATION_CACHE_KEY);
+      if (vCache) this.headerValidation = JSON.parse(vCache);
+    } catch (e) {}
 
     // 1. Try uploaded CSV first (user explicitly uploaded)
     try {
@@ -146,10 +155,13 @@ export class DataService {
   /**
    * Persist Google Sheets data to localStorage for refresh survival.
    */
-  private persistSheetsData(data: SurveyResponse[]) {
+  private persistSheetsData(data: SurveyResponse[], validation: HeaderValidationResult | null) {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(SHEETS_CACHE_KEY, JSON.stringify(data));
+      if (validation) {
+        localStorage.setItem(VALIDATION_CACHE_KEY, JSON.stringify(validation));
+      }
       localStorage.setItem(SHEETS_CACHE_META_KEY, JSON.stringify({
         lastUpdated: new Date().toISOString(),
         spreadsheetId: this.spreadsheetId,
@@ -182,11 +194,10 @@ export class DataService {
       const success = await this.fetchFromGoogleSheets(apiKey, sheetId);
       if (success) {
         this.log(`[Fetch] Google Sheets API success. ${this.data.length} rows loaded.`);
-        this.persistSheetsData(this.data);
+        this.persistSheetsData(this.data, this.headerValidation);
         return this.data;
       }
       this.log(`[Fetch] Google Sheets API failed: ${this.errorMessage}. NOT falling back to mock.`);
-      // Return whatever cache we have (may be stale cached-sheets data from restoration)
       return this.data;
     }
 
@@ -269,10 +280,11 @@ export class DataService {
       if (json.values && json.values.length > 0) {
         try {
           const parsed = parseGoogleSheetsData(json.values);
-          this.data = parsed;
+          this.data = parsed.data;
+          this.headerValidation = parsed.validation;
           this.syncStatus = 'live';
           this.lastUpdated = new Date();
-          this.rowsReturned = parsed.length;
+          this.rowsReturned = parsed.data.length;
           this.errorMessage = null;
           console.info(`Rows Returned: ${json.values.length}`);
           return true;
@@ -313,10 +325,11 @@ export class DataService {
       if (text) {
         try {
           const parsed = parseCsvData(text);
-          this.data = parsed;
+          this.data = parsed.data;
+          this.headerValidation = parsed.validation;
           this.syncStatus = 'csv';
           this.lastUpdated = new Date();
-          this.rowsReturned = parsed.length;
+          this.rowsReturned = parsed.data.length;
           this.errorMessage = null;
           return true;
         } catch (e: unknown) {
@@ -336,15 +349,17 @@ export class DataService {
   public async uploadCsvData(csvContent: string): Promise<boolean> {
     try {
       const parsed = parseCsvData(csvContent);
-      if (parsed && parsed.length > 0) {
-        this.data = parsed;
+      if (parsed && parsed.data.length > 0) {
+        this.data = parsed.data;
+        this.headerValidation = parsed.validation;
         this.syncStatus = 'uploaded-csv';
         this.source = 'Uploaded CSV';
         this.lastUpdated = new Date();
-        this.rowsReturned = parsed.length;
+        this.rowsReturned = parsed.data.length;
         this.errorMessage = null;
         if (typeof window !== 'undefined') {
-          localStorage.setItem(CSV_DATA_KEY, JSON.stringify(parsed));
+          localStorage.setItem(CSV_DATA_KEY, JSON.stringify(parsed.data));
+          localStorage.setItem(VALIDATION_CACHE_KEY, JSON.stringify(parsed.validation));
           localStorage.setItem(CSV_TIMESTAMP_KEY, this.lastUpdated.toISOString());
         }
         return true;
@@ -375,6 +390,7 @@ export class DataService {
       envCsvUrl: !!process.env.NEXT_PUBLIC_GOOGLE_SHEETS_CSV_URL,
       restoredFromCache: this.restoredFromCache,
       startupLog: [...this.startupLog],
+      headerValidation: this.headerValidation,
     };
   }
 

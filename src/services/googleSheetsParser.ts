@@ -1,72 +1,99 @@
 import { SurveyResponse } from '@/types';
 import { normalizeCommunityName } from '@/utils/communityNormalizer';
+import { SURVEY_QUESTIONS } from '@/types/surveyQuestions';
+
+export interface HeaderValidationResult {
+  missingHeaders: string[];
+  unexpectedHeaders: string[];
+  duplicateHeaders: string[];
+  isValid: boolean;
+}
+
+export interface ParseResult {
+  data: SurveyResponse[];
+  validation: HeaderValidationResult;
+}
 
 /**
  * Parses raw 2D array from Google Sheets API into strongly typed SurveyResponse array.
  */
-export function parseGoogleSheetsData(rows: unknown[][]): SurveyResponse[] {
-  if (!rows || rows.length < 2) return [];
+export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
+  if (!rows || rows.length < 2) {
+    return {
+      data: [],
+      validation: { missingHeaders: [], unexpectedHeaders: [], duplicateHeaders: [], isValid: false }
+    };
+  }
 
-  const headers = rows[0].map(h => String(h).toLowerCase().trim());
+  const rawHeaders = rows[0].map(h => String(h).trim());
+  const headers = rawHeaders.map(h => h.toLowerCase());
   const dataRows = rows.slice(1);
 
+  // Validation Logic
+  const duplicateHeaders = rawHeaders.filter((item, index) => rawHeaders.indexOf(item) !== index);
+  const missingHeaders: string[] = [];
+  
   // Helper to find column index (fuzzy match on expected form header text)
-  const getIndex = (searchTerms: string[]) => {
-    return headers.findIndex(header => 
+  const getIndex = (searchTerms: string[], questionNumber?: number): number => {
+    const idx = headers.findIndex(header => 
       searchTerms.some(term => header.includes(term.toLowerCase()))
     );
+    if (idx === -1 && questionNumber) {
+      const qMeta = SURVEY_QUESTIONS.find(q => q.questionNumber === questionNumber);
+      if (qMeta) {
+        missingHeaders.push(`Q${questionNumber}: ${qMeta.questionText}`);
+      }
+    }
+    return idx;
   };
 
-  // Map our expected headers. These can be adjusted if the exact form headers change.
+  // Map our expected headers according to the actual CSV columns
   const idxId = getIndex(['id', 'response id']);
   const idxTimestamp = getIndex(['timestamp', 'time']);
   
   // Demographics
-  const idxAge = getIndex(['age']);
-  const idxGender = getIndex(['gender']);
-  const idxLocation = getIndex(['community', 'location', 'live']);
-  const idxEducation = getIndex(['education', 'highest level']);
-  const idxCurrentStatus = getIndex(['current status', 'currently doing']);
+  const idxAge = getIndex(['age group'], 3);
+  const idxGender = getIndex(['gender'], 4);
+  const idxLocation = getIndex(['area/community'], 5);
+  const idxEducation = getIndex(['level of education'], 6);
+  const idxCurrentStatus = getIndex(['current status'], 7);
   
   // Digital Access
-  const idxSmartphone = getIndex(['smartphone', 'own a smart phone']);
-  const idxLaptop = getIndex(['laptop', 'own a laptop']);
-  const idxDesktop = getIndex(['desktop']);
-  const idxTablet = getIndex(['tablet']);
-  const idxInternetRel = getIndex(['internet reliability', 'reliable is the internet']);
-  const idxInternetLoc = getIndex(['internet access location', 'often access the internet']);
-  const idxElectricityRel = getIndex(['electricity reliability', 'reliable is electricity']);
-  const idxPowerSource = getIndex(['power source', 'primary source of power']);
-  const idxElectricityImpact = getIndex(['electricity impact', 'lack of electricity impact']);
-  const idxDataCost = getIndex(['data cost', 'spend on internet data']);
+  const idxDevices = getIndex(['devices do you have regular access to'], 8);
+  const idxInternetRel = getIndex(['reliable is your internet access'], 9);
+  const idxInternetLoc = getIndex(['where do you mostly access the internet'], 10);
+  const idxElectricityRel = getIndex(['reliable is electricity in your area'], 11);
+  const idxPowerSource = getIndex(['primarily power your digital devices'], 12);
+  const idxElectricityImpact = getIndex(['unreliable electricity affect your ability'], 13);
+  const idxDataCost = getIndex(['spend monthly on internet/data'], 14);
   
   // Digital Skills
-  const idxSkillsPossessed = getIndex(['skills do you possess', 'digital skills']);
-  const idxSkillLevel = getIndex(['overall digital skill level', 'rate your overall']);
-  const idxCodingExp = getIndex(['coding experience', 'programming or coding']);
+  const idxSkillsPossessed = getIndex(['digital skills do you possess'], 15);
+  const idxSkillLevel = getIndex(['rate your overall digital skill'], 16);
+  const idxCodingExp = getIndex(['written computer code/programs'], 17);
   
   // AI Awareness
-  const idxUsedAI = getIndex(['used an ai tool', 'used ai']);
-  const idxAITools = getIndex(['ai tools have you used', 'which ai tools']);
-  const idxAIFreq = getIndex(['how often do you use ai']);
-  const idxAIUseCases = getIndex(['primarily use ai for', 'use cases']);
+  const idxUsedAI = getIndex(['used an ai tool before'], 18);
+  const idxAITools = getIndex(['which ai tools have you used'], 19);
+  const idxAIFreq = getIndex(['how often do you use ai tools'], 20);
+  const idxAIUseCases = getIndex(['primarily use ai tools for'], 21);
   
   // Career Awareness
-  const idxCareersKnown = getIndex(['technology careers are you aware', 'careers known']);
-  const idxCareerInterest = getIndex(['consider a career in tech', 'career interest']);
-  const idxPreferredTechField = getIndex(['preferred technology field', 'preferred tech field']);
+  const idxCareersKnown = getIndex(['technology careers are you familiar with'], 22);
+  const idxCareerInterest = getIndex(['consider a career in technology'], 23);
+  const idxPreferredTechField = getIndex(['technology field interests you the most'], 24);
   
   // Employment Readiness
-  const idxWorkType = getIndex(['preferred work arrangement', 'preferred work type']);
-  const idxDesiredSkills = getIndex(['skills do you think are most important', 'desired skills']);
+  const idxWorkType = getIndex(['type of work are you most interested in'], 25);
+  const idxDesiredSkills = getIndex(['digital skills would you most like to learn'], 26);
   
   // Barriers
-  const idxBarriers = getIndex(['barriers prevent you', 'barriers to learning']);
-  const idxBiggestBarrier = getIndex(['biggest barrier']);
+  const idxBarriers = getIndex(['prevents you from learning digital skills'], 27);
+  const idxBiggestBarrier = getIndex(['biggest barrier'], 28);
   
   // Qualitative
-  const idxSupport = getIndex(['support do you need most', 'support needed']);
-  const idxRecs = getIndex(['recommendations for improving', 'recommendations']);
+  const idxSupport = getIndex(['support would help you improve'], 29);
+  const idxRecs = getIndex(['done to improve digital readiness'], 30);
 
   // Parsing Helpers
   const parseStr = (row: unknown[], idx: number) => (idx !== -1 && row[idx] ? String(row[idx]) : '');
@@ -74,46 +101,42 @@ export function parseGoogleSheetsData(rows: unknown[][]): SurveyResponse[] {
     const val = parseStr(row, idx).toLowerCase();
     return val === 'yes' || val === 'true';
   };
+  
+  // IMPORTANT FIX: Google Forms exports lists delimited by semicolons
   const parseList = (row: unknown[], idx: number) => {
     const val = parseStr(row, idx);
     if (!val) return [];
-    return val.split(',').map(s => s.trim()).filter(Boolean);
-  };
-  const parseAgeGroup = (val: string) => {
-    const num = parseInt(val, 10);
-    if (isNaN(num)) return val || 'Unknown';
-    if (num < 18) return 'Under 18';
-    if (num <= 24) return '18-24';
-    if (num <= 30) return '25-30';
-    if (num <= 35) return '31-35';
-    return '36+';
+    return val.split(';').map(s => s.trim()).filter(Boolean);
   };
 
-  return dataRows.map((row, i) => {
+  const data = dataRows.map((row, i) => {
     const rawLocation = parseStr(row, idxLocation);
     const normalizedLocation = normalizeCommunityName(rawLocation);
     const rawAge = parseStr(row, idxAge);
     
-    // Convert old numeric fields if needed
+    // Semicolon-delimited arrays
     const skillsPossessed = parseList(row, idxSkillsPossessed);
+    const devicesList = parseList(row, idxDevices);
     
     return {
       id: parseStr(row, idxId) || `response-${i + 1}`,
       timestamp: parseStr(row, idxTimestamp) || new Date().toISOString(),
       
-      ageGroup: parseAgeGroup(rawAge),
-      age: parseInt(rawAge, 10) || 0,
+      ageGroup: rawAge || 'Unknown',
+      age: 0, // Unused since we use ageGroup
       gender: parseStr(row, idxGender) || 'Prefer not to say',
       educationLevel: parseStr(row, idxEducation) || 'Other',
       location: normalizedLocation || 'Unknown',
       currentStatus: parseStr(row, idxCurrentStatus),
       
-      ownsSmartphone: parseBool(row, idxSmartphone),
-      ownsLaptop: parseBool(row, idxLaptop),
-      hasDesktopAccess: parseBool(row, idxDesktop),
-      hasTabletAccess: parseBool(row, idxTablet),
+      // Map multi-select device list to booleans
+      ownsSmartphone: devicesList.some(d => d.toLowerCase().includes('smartphone')),
+      ownsLaptop: devicesList.some(d => d.toLowerCase().includes('laptop')),
+      hasDesktopAccess: devicesList.some(d => d.toLowerCase().includes('desktop')),
+      hasTabletAccess: devicesList.some(d => d.toLowerCase().includes('tablet')),
+      
       internetReliability: parseStr(row, idxInternetRel),
-      internetAccessLocation: parseStr(row, idxInternetLoc),
+      internetAccessLocation: parseStr(row, idxInternetLoc), // Note: originally expected string, but UI will need array if multiple
       electricityReliability: parseStr(row, idxElectricityRel),
       powerSource: parseStr(row, idxPowerSource),
       electricityImpact: parseStr(row, idxElectricityImpact),
@@ -169,4 +192,14 @@ export function parseGoogleSheetsData(rows: unknown[][]): SurveyResponse[] {
       recommendations: parseStr(row, idxRecs),
     };
   });
+
+  return {
+    data,
+    validation: {
+      missingHeaders,
+      unexpectedHeaders: [], // Not fully implemented as we only know what we map
+      duplicateHeaders,
+      isValid: missingHeaders.length === 0
+    }
+  };
 }

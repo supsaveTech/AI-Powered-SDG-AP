@@ -63,7 +63,6 @@ export default function MethodologyPage() {
               <br />
               3. <em>Uploaded CSV:</em> Local cached data ingested via the Admin panel.
               <br />
-              4. <em>Mock Data:</em> Development fallback if all live connections fail.
             </p>
           </div>
         </div>
@@ -102,7 +101,7 @@ export default function MethodologyPage() {
           </div>
           <div className="bg-slate-50 p-4 rounded-lg md:col-span-2">
             <h3 className="font-bold text-slate-900 mb-2">Traceability</h3>
-            <p>Every KPI, index, and chart on this platform traces directly back to a specific survey question (Q1-Q31), ensuring complete data transparency.</p>
+            <p>Every KPI, index, and chart on this platform traces directly back to a specific survey question (Q1–Q30), ensuring complete data transparency.</p>
           </div>
         </div>
       </div>

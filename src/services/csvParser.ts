@@ -1,12 +1,14 @@
-import { parseGoogleSheetsData } from './googleSheetsParser';
+import { parseGoogleSheetsData, ParseResult } from './googleSheetsParser';
 import { SurveyResponse } from '@/types';
 
 /**
  * Parses raw CSV string data into SurveyResponse array.
  * We reuse the logic from googleSheetsParser by converting the CSV into a 2D array first.
  */
-export function parseCsvData(csvText: string): SurveyResponse[] {
-  if (!csvText) return [];
+export function parseCsvData(csvText: string): ParseResult {
+  if (!csvText) {
+    return { data: [], validation: { missingHeaders: [], unexpectedHeaders: [], duplicateHeaders: [], isValid: false } };
+  }
   
   // Simple CSV parser that handles basic comma separation and quotes.
   // For production, a library like PapaParse might be better, but this works for standard Google Forms CSVs.

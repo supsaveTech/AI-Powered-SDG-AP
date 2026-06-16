@@ -193,6 +193,32 @@ export function AdminDashboard() {
             </div>
           </div>
 
+          <div className="space-y-3 mb-6 border-t pt-4">
+            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Survey Header Validation</h3>
+            
+            <div className="flex justify-between text-sm py-1 border-b border-slate-100">
+              <span className="text-slate-500">Validation Status</span>
+              {diagnostics?.headerValidation ? (
+                <span className={`font-medium ${diagnostics.headerValidation.isValid ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {diagnostics.headerValidation.isValid ? 'Valid' : 'Warning'}
+                </span>
+              ) : (
+                <span className="text-slate-400">N/A</span>
+              )}
+            </div>
+            
+            {diagnostics?.headerValidation && diagnostics.headerValidation.missingHeaders.length > 0 && (
+              <div className="text-sm py-2">
+                <span className="text-amber-600 font-semibold mb-1 block">Missing Survey Headers:</span>
+                <ul className="list-disc pl-5 text-slate-600 text-xs space-y-1">
+                  {diagnostics.headerValidation.missingHeaders.map((header, idx) => (
+                    <li key={idx}>{header}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
             <div className="flex gap-4">
               <button
                 onClick={handleRefreshData}

@@ -9,49 +9,48 @@ export interface SurveyQuestionMeta {
 
 export const SURVEY_QUESTIONS: SurveyQuestionMeta[] = [
   // Demographics
-  { questionNumber: 1, questionText: "What is your age?", fieldKey: 'age', category: 'demographics' },
-  { questionNumber: 2, questionText: "What is your gender?", fieldKey: 'gender', category: 'demographics' },
-  { questionNumber: 3, questionText: "Which community do you live in?", fieldKey: 'location', category: 'demographics' },
-  { questionNumber: 4, questionText: "What is your highest level of education?", fieldKey: 'educationLevel', category: 'demographics' },
-  { questionNumber: 5, questionText: "What is your current status?", fieldKey: 'currentStatus', category: 'demographics' },
+  { questionNumber: 3, questionText: "Age Group", fieldKey: 'ageGroup', category: 'demographics' },
+  { questionNumber: 4, questionText: "Gender", fieldKey: 'gender', category: 'demographics' },
+  { questionNumber: 5, questionText: "Which area/community do you currently reside in?", fieldKey: 'location', category: 'demographics' },
+  { questionNumber: 6, questionText: "Highest Level of Education Completed", fieldKey: 'educationLevel', category: 'demographics' },
+  { questionNumber: 7, questionText: "Current Status", fieldKey: 'currentStatus', category: 'demographics' },
 
   // Digital Access
-  { questionNumber: 6, questionText: "Do you own a smartphone?", fieldKey: 'ownsSmartphone', category: 'digital-access' },
-  { questionNumber: 7, questionText: "Do you own a laptop?", fieldKey: 'ownsLaptop', category: 'digital-access' },
-  { questionNumber: 8, questionText: "Do you have access to a desktop computer?", fieldKey: 'hasDesktopAccess', category: 'digital-access' },
-  { questionNumber: 9, questionText: "Do you have access to a tablet?", fieldKey: 'hasTabletAccess', category: 'digital-access' },
-  { questionNumber: 10, questionText: "How reliable is the internet connection in your area?", fieldKey: 'internetReliability', category: 'digital-access' },
-  { questionNumber: 11, questionText: "Where do you most often access the internet?", fieldKey: 'internetAccessLocation', category: 'digital-access' },
-  { questionNumber: 12, questionText: "How reliable is electricity in your area?", fieldKey: 'electricityReliability', category: 'digital-access' },
-  { questionNumber: 13, questionText: "What is your primary source of power?", fieldKey: 'powerSource', category: 'digital-access' },
-  { questionNumber: 14, questionText: "How often does lack of electricity impact your ability to use digital devices?", fieldKey: 'electricityImpact', category: 'digital-access' },
-  { questionNumber: 15, questionText: "How much do you spend on internet data monthly?", fieldKey: 'monthlyDataCost', category: 'digital-access' },
+  // Note: Question 8 covers smartphone, laptop, desktop, and tablet. We map it generically to 'ownsSmartphone' as the primary indicator for now, 
+  // but the parser handles the array split into multiple boolean fields.
+  { questionNumber: 8, questionText: "Which devices do you have regular access to?", fieldKey: 'ownsSmartphone', category: 'digital-access' },
+  { questionNumber: 9, questionText: "How reliable is your internet access?", fieldKey: 'internetReliability', category: 'digital-access' },
+  { questionNumber: 10, questionText: "Where do you mostly access the internet?", fieldKey: 'internetAccessLocation', category: 'digital-access' },
+  { questionNumber: 11, questionText: "How reliable is electricity in your area?", fieldKey: 'electricityReliability', category: 'digital-access' },
+  { questionNumber: 12, questionText: "How do you primarily power your digital devices?", fieldKey: 'powerSource', category: 'digital-access' },
+  { questionNumber: 13, questionText: "How often does unreliable electricity affect your ability to learn, work, or access digital services?", fieldKey: 'electricityImpact', category: 'digital-access' },
+  { questionNumber: 14, questionText: "How much do you spend monthly on internet/data access?", fieldKey: 'monthlyDataCost', category: 'digital-access' },
 
   // Digital Skills
-  { questionNumber: 16, questionText: "Which digital skills do you possess?", fieldKey: 'digitalSkillsPossessed', category: 'digital-skills' },
-  { questionNumber: 17, questionText: "How would you rate your overall digital skill level?", fieldKey: 'skillLevel', category: 'digital-skills' },
-  { questionNumber: 18, questionText: "Do you have any programming or coding experience?", fieldKey: 'codingExperience', category: 'digital-skills' },
+  { questionNumber: 15, questionText: "Which of the following digital skills do you possess?", fieldKey: 'digitalSkillsPossessed', category: 'digital-skills' },
+  { questionNumber: 16, questionText: "How would you rate your overall digital skill level?", fieldKey: 'skillLevel', category: 'digital-skills' },
+  { questionNumber: 17, questionText: "Have you ever written computer code/programs?", fieldKey: 'codingExperience', category: 'digital-skills' },
 
   // AI Awareness
-  { questionNumber: 19, questionText: "Have you used an AI tool before?", fieldKey: 'hasUsedAI', category: 'ai-awareness' },
-  { questionNumber: 20, questionText: "Which AI tools have you used?", fieldKey: 'aiToolsUsed', category: 'ai-awareness' },
-  { questionNumber: 21, questionText: "How often do you use AI tools?", fieldKey: 'aiUsageFrequency', category: 'ai-awareness' },
-  { questionNumber: 22, questionText: "What do you primarily use AI for?", fieldKey: 'aiUseCases', category: 'ai-awareness' },
+  { questionNumber: 18, questionText: "Have you used an AI tool before?", fieldKey: 'hasUsedAI', category: 'ai-awareness' },
+  { questionNumber: 19, questionText: "Which AI tools have you used?", fieldKey: 'aiToolsUsed', category: 'ai-awareness' },
+  { questionNumber: 20, questionText: "How often do you use AI tools?", fieldKey: 'aiUsageFrequency', category: 'ai-awareness' },
+  { questionNumber: 21, questionText: "What do you primarily use AI tools for?", fieldKey: 'aiUseCases', category: 'ai-awareness' },
 
   // Career Awareness
-  { questionNumber: 23, questionText: "Which technology careers are you aware of?", fieldKey: 'techCareersKnown', category: 'career' },
-  { questionNumber: 24, questionText: "Would you consider a career in technology?", fieldKey: 'careerInterest', category: 'career' },
-  { questionNumber: 25, questionText: "What is your preferred technology field?", fieldKey: 'preferredTechField', category: 'career' },
+  { questionNumber: 22, questionText: "Which of the following technology careers are you familiar with?", fieldKey: 'techCareersKnown', category: 'career' },
+  { questionNumber: 23, questionText: "Would you consider a career in technology?", fieldKey: 'careerInterest', category: 'career' },
+  { questionNumber: 24, questionText: "Which technology field interests you the most?", fieldKey: 'preferredTechField', category: 'career' },
 
   // Employment Readiness
-  { questionNumber: 26, questionText: "What is your preferred work arrangement?", fieldKey: 'preferredWorkType', category: 'employment' },
-  { questionNumber: 27, questionText: "Which skills do you think are most important for employment?", fieldKey: 'desiredSkills', category: 'employment' },
+  { questionNumber: 25, questionText: "What type of work are you most interested in?", fieldKey: 'preferredWorkType', category: 'employment' },
+  { questionNumber: 26, questionText: "Which digital skills would you most like to learn?", fieldKey: 'desiredSkills', category: 'employment' },
 
   // Barriers
-  { questionNumber: 28, questionText: "What barriers prevent you from learning digital skills?", fieldKey: 'barriersToLearning', category: 'barriers' },
-  { questionNumber: 29, questionText: "What is your biggest barrier to digital inclusion?", fieldKey: 'biggestBarrier', category: 'barriers' },
+  { questionNumber: 27, questionText: "What prevents you from learning digital skills?", fieldKey: 'barriersToLearning', category: 'barriers' },
+  { questionNumber: 28, questionText: "Which of these is your biggest barrier?", fieldKey: 'biggestBarrier', category: 'barriers' },
 
   // Qualitative
-  { questionNumber: 30, questionText: "What kind of support do you need most?", fieldKey: 'supportNeeded', category: 'qualitative' },
-  { questionNumber: 31, questionText: "Any recommendations for improving digital literacy in your community?", fieldKey: 'recommendations', category: 'qualitative' }
+  { questionNumber: 29, questionText: "What support would help you improve your digital skills and career opportunities?", fieldKey: 'supportNeeded', category: 'qualitative' },
+  { questionNumber: 30, questionText: "In your opinion, what should be done to improve digital readiness among youths in Port Harcourt?", fieldKey: 'recommendations', category: 'qualitative' }
 ];
