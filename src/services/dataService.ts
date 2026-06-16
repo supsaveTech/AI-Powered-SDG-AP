@@ -8,6 +8,7 @@ export type SyncStatus =
   | 'csv' 
   | 'uploaded-csv'
   | 'cached-csv'
+  | 'cached-sheets'
   | 'mock' 
   | 'offline'
   | 'error-auth'
@@ -32,6 +33,8 @@ export interface DataDiagnostics {
   envApiKey: boolean;
   envSheetId: boolean;
   envCsvUrl: boolean;
+  restoredFromCache: boolean;
+  startupLog: string[];
 }
 
 export interface DataStatus {
@@ -41,10 +44,15 @@ export interface DataStatus {
   syncStatus: SyncStatus;
 }
 
+const SHEETS_CACHE_KEY = 'sheets_data_cache';
+const SHEETS_CACHE_META_KEY = 'sheets_data_cache_meta';
+const CSV_DATA_KEY = 'uploaded_csv_data';
+const CSV_TIMESTAMP_KEY = 'uploaded_csv_timestamp';
+
 export class DataService {
   private static instance: DataService;
   private data: SurveyResponse[] = [];
-  
+
   // Diagnostics
   private syncStatus: SyncStatus = 'offline';
   private source: string = 'None';
@@ -56,9 +64,12 @@ export class DataService {
   private lastUpdated: Date | null = null;
   private errorMessage: string | null = null;
   private rawResponsePreview: string | null = null;
+  private restoredFromCache: boolean = false;
+  private startupLog: string[] = [];
 
   private constructor() {
-    this.tryRestoreCachedCsv();
+    this.log('[Startup] DataService initializing...');
+    this.tryRestoreAnyCache();
   }
 
   public static getInstance(): DataService {
@@ -68,30 +79,95 @@ export class DataService {
     return DataService.instance;
   }
 
-  private tryRestoreCachedCsv() {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('uploaded_csv_data');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            this.data = parsed;
-            this.syncStatus = 'cached-csv';
-            this.source = 'Cached CSV';
-            this.rowsReturned = parsed.length;
-            
-            const timestamp = localStorage.getItem('uploaded_csv_timestamp');
-            this.lastUpdated = timestamp ? new Date(timestamp) : new Date();
-          }
+  private log(msg: string) {
+    const entry = `${new Date().toISOString().split('T')[1].split('.')[0]} ${msg}`;
+    this.startupLog.push(entry);
+    console.info(`[DataService] ${msg}`);
+  }
+
+  /**
+   * Try to restore the best available cached dataset on startup.
+   * Priority: uploaded CSV > cached Google Sheets
+   */
+  private tryRestoreAnyCache() {
+    if (typeof window === 'undefined') {
+      this.log('[Startup] Server-side: skipping localStorage restore.');
+      return;
+    }
+
+    // 1. Try uploaded CSV first (user explicitly uploaded)
+    try {
+      const csvData = localStorage.getItem(CSV_DATA_KEY);
+      if (csvData) {
+        const parsed = JSON.parse(csvData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.data = parsed;
+          this.syncStatus = 'cached-csv';
+          this.source = 'Cached CSV (localStorage)';
+          this.rowsReturned = parsed.length;
+          const ts = localStorage.getItem(CSV_TIMESTAMP_KEY);
+          this.lastUpdated = ts ? new Date(ts) : new Date();
+          this.restoredFromCache = true;
+          this.log(`[Startup] Restored ${parsed.length} records from uploaded CSV cache.`);
+          return;
         }
-      } catch (e) {
-        console.error('Failed to restore cached CSV', e);
       }
+    } catch (e) {
+      this.log(`[Startup] Failed to restore CSV cache: ${(e as Error).message}`);
+    }
+
+    // 2. Try cached Google Sheets data
+    try {
+      const sheetsData = localStorage.getItem(SHEETS_CACHE_KEY);
+      if (sheetsData) {
+        const parsed = JSON.parse(sheetsData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.data = parsed;
+          this.syncStatus = 'cached-sheets';
+          this.source = 'Google Sheets API (cached)';
+          this.rowsReturned = parsed.length;
+          const meta = localStorage.getItem(SHEETS_CACHE_META_KEY);
+          if (meta) {
+            const metaObj = JSON.parse(meta);
+            this.lastUpdated = metaObj.lastUpdated ? new Date(metaObj.lastUpdated) : new Date();
+            this.spreadsheetId = metaObj.spreadsheetId || null;
+            this.requestedRange = metaObj.requestedRange || null;
+          }
+          this.restoredFromCache = true;
+          this.log(`[Startup] Restored ${parsed.length} records from Google Sheets cache.`);
+          return;
+        }
+      }
+    } catch (e) {
+      this.log(`[Startup] Failed to restore Sheets cache: ${(e as Error).message}`);
+    }
+
+    this.log('[Startup] No cached data found. Will fetch from source on first request.');
+  }
+
+  /**
+   * Persist Google Sheets data to localStorage for refresh survival.
+   */
+  private persistSheetsData(data: SurveyResponse[]) {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(SHEETS_CACHE_KEY, JSON.stringify(data));
+      localStorage.setItem(SHEETS_CACHE_META_KEY, JSON.stringify({
+        lastUpdated: new Date().toISOString(),
+        spreadsheetId: this.spreadsheetId,
+        requestedRange: this.requestedRange,
+        rowsReturned: data.length,
+      }));
+      this.log(`[Sync] Persisted ${data.length} records to localStorage cache.`);
+    } catch (e) {
+      this.log(`[Sync] Failed to persist to localStorage: ${(e as Error).message}`);
     }
   }
 
   public async fetchData(forceRefresh: boolean = false): Promise<SurveyResponse[]> {
-    if (this.data.length > 0 && !forceRefresh && this.syncStatus !== 'offline' && this.syncStatus !== 'error-env' && !this.syncStatus.startsWith('error-')) {
+    // Return cached in-memory data if valid and not forced
+    const isErrorState = this.syncStatus.startsWith('error-');
+    if (this.data.length > 0 && !forceRefresh && !isErrorState && this.syncStatus !== 'offline') {
       return this.data;
     }
 
@@ -99,43 +175,54 @@ export class DataService {
     const sheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEETS_SPREADSHEET_ID;
     const csvUrl = process.env.NEXT_PUBLIC_GOOGLE_SHEETS_CSV_URL;
 
+    this.log(`[Fetch] Starting data fetch. forceRefresh=${forceRefresh}`);
+    this.log(`[Fetch] Env: apiKey=${!!apiKey}, sheetId=${!!sheetId}, csvUrl=${!!csvUrl}`);
+
     // 1. Try Google Sheets API
     if (apiKey && sheetId) {
+      this.log('[Fetch] Attempting Google Sheets API...');
       const success = await this.fetchFromGoogleSheets(apiKey, sheetId);
-      if (success) return this.data;
-      // DO NOT silently fall back. Surface the error.
+      if (success) {
+        this.log(`[Fetch] Google Sheets API success. ${this.data.length} rows loaded.`);
+        this.persistSheetsData(this.data);
+        return this.data;
+      }
+      this.log(`[Fetch] Google Sheets API failed: ${this.errorMessage}. NOT falling back to mock.`);
+      // Return whatever cache we have (may be stale cached-sheets data from restoration)
       return this.data;
     }
 
-    // 2. Try CSV URL
+    // 2. Try Published CSV URL
     if (csvUrl) {
+      this.log('[Fetch] Attempting CSV URL...');
       const success = await this.fetchFromCsvUrl(csvUrl);
-      if (success) return this.data;
+      if (success) {
+        this.log(`[Fetch] CSV URL success. ${this.data.length} rows loaded.`);
+        return this.data;
+      }
+      this.log(`[Fetch] CSV URL failed: ${this.errorMessage}.`);
       return this.data;
     }
 
-    // 3. Cached / Uploaded CSV fallback
-    if (this.data.length > 0 && (this.syncStatus === 'uploaded-csv' || this.syncStatus === 'cached-csv')) {
+    // 3. Cached/Uploaded CSV (already restored in constructor, just return)
+    if (this.data.length > 0 && (this.syncStatus === 'uploaded-csv' || this.syncStatus === 'cached-csv' || this.syncStatus === 'cached-sheets')) {
+      this.log(`[Fetch] Returning cached data (${this.syncStatus}). ${this.data.length} rows.`);
       return this.data;
     }
 
-    // 4. Missing Env error if absolutely nothing is configured
+    // 4. No configuration at all → error-env, then last resort mock
     if (!apiKey && !sheetId && !csvUrl) {
       this.syncStatus = 'error-env';
-      this.errorMessage = 'Environment variables NEXT_PUBLIC_GOOGLE_SHEETS_API_KEY and SPREADSHEET_ID are missing.';
+      this.errorMessage = 'No data source configured. Set NEXT_PUBLIC_GOOGLE_SHEETS_API_KEY and SPREADSHEET_ID.';
       this.source = 'None';
-    }
-    
-    // 5. Mock Data as absolute last resort
-    if (this.syncStatus === 'error-env') {
-      console.warn("No real data sources configured. Falling back to mock data as last resort.");
+      this.log('[Fetch] error-env: no env vars set. Loading mock data as last resort.');
       this.data = mockSurveyData;
       this.syncStatus = 'mock';
       this.source = 'Mock Data';
       this.lastUpdated = new Date();
       this.rowsReturned = this.data.length;
     }
-    
+
     return this.data;
   }
 
@@ -144,37 +231,30 @@ export class DataService {
     this.requestedRange = 'Form Responses 1!A:Z';
     this.requestUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${this.requestedRange}?key=***HIDDEN***`;
     this.source = 'Google Sheets API';
-    
-    console.info("----------------------------------------");
-    console.info("Google Sheets Request");
+
+    console.info('----------------------------------------');
+    console.info('Google Sheets Request');
     console.info(`URL: ${this.requestUrl}`);
     console.info(`Spreadsheet: ${sheetId}`);
     console.info(`Range: ${this.requestedRange}`);
-    console.info("----------------------------------------");
+    console.info('----------------------------------------');
 
     try {
       const actualUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${this.requestedRange}?key=${apiKey}`;
       const res = await fetch(actualUrl);
-      
       this.httpStatus = res.status;
-      
       const text = await res.text();
       this.rawResponsePreview = text.substring(0, 500);
-
       console.info(`Status: ${res.status}`);
 
       if (!res.ok) {
         let errMessage = `HTTP ${res.status}`;
         try {
           const errJson = JSON.parse(text);
-          if (errJson.error && errJson.error.message) {
-            errMessage = errJson.error.message;
-          }
+          if (errJson.error?.message) errMessage = errJson.error.message;
         } catch {}
-
         this.errorMessage = errMessage;
         console.error(`Error: ${errMessage}`);
-
         if (res.status === 403 || res.status === 401) {
           this.syncStatus = 'error-permission';
         } else if (res.status === 404) {
@@ -214,7 +294,7 @@ export class DataService {
       }
     } catch (error: unknown) {
       this.syncStatus = 'error-network';
-      this.errorMessage = (error as Error).message || 'Network error fetching from Google Sheets';
+      this.errorMessage = (error as Error).message || 'Network error';
       this.httpStatus = 0;
       console.error(`Network Error: ${this.errorMessage}`);
       return false;
@@ -223,20 +303,17 @@ export class DataService {
 
   private async fetchFromCsvUrl(url: string): Promise<boolean> {
     this.source = 'Google Sheets CSV URL';
-    this.requestUrl = url.substring(0, Math.min(url.length, 50)) + '...';
+    this.requestUrl = url.substring(0, 50) + '...';
     try {
       const res = await fetch(url);
       this.httpStatus = res.status;
-      
       const text = await res.text();
       this.rawResponsePreview = text.substring(0, 500);
-
       if (!res.ok) {
         this.syncStatus = 'error-network';
         this.errorMessage = `HTTP ${res.status}`;
         return false;
       }
-
       if (text) {
         try {
           const parsed = parseCsvData(text);
@@ -255,7 +332,7 @@ export class DataService {
       return false;
     } catch (error: unknown) {
       this.syncStatus = 'error-network';
-      this.errorMessage = (error as Error).message || 'Network error fetching CSV';
+      this.errorMessage = (error as Error).message || 'Network error';
       return false;
     }
   }
@@ -270,13 +347,10 @@ export class DataService {
         this.lastUpdated = new Date();
         this.rowsReturned = parsed.length;
         this.errorMessage = null;
-        
         if (typeof window !== 'undefined') {
-          localStorage.setItem("uploaded_csv_data", JSON.stringify(parsed));
-          localStorage.setItem("uploaded_csv_timestamp", this.lastUpdated.toISOString());
-          localStorage.setItem("uploaded_csv_count", parsed.length.toString());
+          localStorage.setItem(CSV_DATA_KEY, JSON.stringify(parsed));
+          localStorage.setItem(CSV_TIMESTAMP_KEY, this.lastUpdated.toISOString());
         }
-        
         return true;
       }
       return false;
@@ -302,7 +376,9 @@ export class DataService {
       rawResponsePreview: this.rawResponsePreview,
       envApiKey: !!process.env.NEXT_PUBLIC_GOOGLE_SHEETS_API_KEY,
       envSheetId: !!process.env.NEXT_PUBLIC_GOOGLE_SHEETS_SPREADSHEET_ID,
-      envCsvUrl: !!process.env.NEXT_PUBLIC_GOOGLE_SHEETS_CSV_URL
+      envCsvUrl: !!process.env.NEXT_PUBLIC_GOOGLE_SHEETS_CSV_URL,
+      restoredFromCache: this.restoredFromCache,
+      startupLog: [...this.startupLog],
     };
   }
 
@@ -311,7 +387,7 @@ export class DataService {
       totalResponses: this.data.length,
       isConnected: this.syncStatus === 'live' || this.syncStatus === 'csv',
       syncTime: this.lastUpdated,
-      syncStatus: this.syncStatus
+      syncStatus: this.syncStatus,
     };
   }
 }

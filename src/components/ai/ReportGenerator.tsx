@@ -13,9 +13,16 @@ export function ReportGenerator() {
     setIsGenerating(true);
     setReport(null);
 
+    const status = dataService.getDataStatus();
+    if (status.totalResponses === 0) {
+      setReport("No survey data is currently available. Please synchronize Google Sheets data or upload a CSV to generate insights grounded in real survey responses.");
+      setIsGenerating(false);
+      return;
+    }
+
     try {
-      const status = dataService.getDataStatus().syncStatus;
-      const notice = status === 'mock' 
+      const syncStatus = status.syncStatus;
+      const notice = syncStatus === 'mock' 
         ? "IMPORTANT: State clearly that the following observations are generated from demonstration data and should not be interpreted as actual survey findings."
         : "IMPORTANT: Frame the insights as based on responses collected from youths in Port Harcourt.";
 
@@ -84,12 +91,18 @@ export function ReportGenerator() {
                     <p className="text-slate-500 mb-6">
                       The AI will analyze the full dataset and generate a comprehensive executive summary aligned with SDG 8 & 9.
                     </p>
-                    <button
-                      onClick={handleGenerate}
-                      className="px-6 py-3 bg-[#0F172A] text-white rounded-lg shadow-sm hover:bg-[#0F172A]/90 transition font-medium w-full"
-                    >
-                      Generate Report
-                    </button>
+                    {dataService.getDataStatus().totalResponses === 0 ? (
+                      <div className="p-4 bg-amber-50 text-amber-700 rounded-md border border-amber-200 text-sm">
+                        No survey data available. Please connect Google Sheets or upload a CSV in the Admin Panel first.
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleGenerate}
+                        className="px-6 py-3 bg-[#0F172A] text-white rounded-lg shadow-sm hover:bg-[#0F172A]/90 transition font-medium w-full"
+                      >
+                        Generate Report
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

@@ -15,6 +15,20 @@ interface AIInsightsProps {
 }
 
 export async function AIInsights({ data, pageName }: AIInsightsProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 mb-3">
+          <Bot className="h-6 w-6 text-slate-400" />
+        </div>
+        <h3 className="text-sm font-semibold text-slate-900 mb-1">AI Insights Unavailable</h3>
+        <p className="text-sm text-slate-500 max-w-md mx-auto">
+          No survey data is currently available. Please synchronize Google Sheets data or upload a CSV in the Admin Panel to generate insights.
+        </p>
+      </div>
+    );
+  }
+
   const ragContext = buildPageContext(data, pageName);
   const insights: AIInsightSet = await generatePageInsights(pageName, ragContext);
 

@@ -143,7 +143,7 @@ export function AdminDashboard() {
         </button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* DIAGNOSTICS LAYER */}
         <div className="bg-white rounded-xl border p-6 shadow-sm flex flex-col">
           <h2 className="text-xl font-bold text-slate-900 mb-4">Google Sheets Diagnostics</h2>
@@ -182,9 +182,9 @@ export function AdminDashboard() {
               <span className="font-mono text-xs">{diagnostics?.requestedRange || 'N/A'}</span>
             </div>
             
-            <div className="flex justify-between text-sm py-1 border-b border-slate-100">
-              <span className="text-slate-500">Last Request URL</span>
-              <span className="font-mono text-xs truncate max-w-[150px]">{diagnostics?.requestUrl || 'N/A'}</span>
+            <div className="flex justify-between items-start gap-4 text-sm py-1 border-b border-slate-100">
+              <span className="text-slate-500 whitespace-nowrap">Last Request URL</span>
+              <span className="font-mono text-xs break-all text-right">{diagnostics?.requestUrl || 'N/A'}</span>
             </div>
             
             <div className="flex justify-between text-sm py-1 border-b border-slate-100">
@@ -230,6 +230,17 @@ export function AdminDashboard() {
                 {diagnostics?.rawResponsePreview || "No response available."}
               </div>
             )}
+          </div>
+
+          <div className="mt-4 border border-slate-200 rounded-md overflow-hidden">
+            <div className="px-4 py-2 bg-slate-50 border-b text-sm font-medium text-slate-700">
+              Startup Diagnostics Log
+            </div>
+            <div className="p-4 bg-slate-900 text-slate-300 font-mono text-xs whitespace-pre-wrap overflow-x-auto max-h-48">
+              {diagnostics?.startupLog && diagnostics.startupLog.length > 0 
+                ? diagnostics.startupLog.join("\n")
+                : "No startup logs available."}
+            </div>
           </div>
         </div>
 

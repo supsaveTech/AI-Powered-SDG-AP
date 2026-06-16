@@ -189,6 +189,13 @@ async function callGemini(messages: AIMessage[], systemPrompt: string): Promise<
 
 // ─── Heuristic Engine (No API Key Required) ───────────────────────────────────
 function heuristicResponse(userMessage: string, ragContext: string): string {
+  // Guard: never fabricate data when no survey responses exist
+  const totalMatch = ragContext.match(/Total Survey Respondents: (\d+)/);
+  const total = parseInt(totalMatch?.[1] ?? '0', 10);
+  if (total === 0 || ragContext.includes('No survey data is currently available')) {
+    return 'No survey data is currently available. Please synchronize Google Sheets data or upload a CSV to generate insights grounded in real survey responses.';
+  }
+
   const q = userMessage.toLowerCase();
 
   // Parse key stats from RAG context
@@ -197,24 +204,23 @@ function heuristicResponse(userMessage: string, ragContext: string): string {
   const barrierMatch = ragContext.match(/1\. (\w[\w ]+): ([\d.]+)\/5/);
   const skillsScoreMatch = ragContext.match(/Digital Skills Readiness Score: ([\d.]+)\/100/);
   const techInterestMatch = ragContext.match(/Technology Career Interest Score: ([\d.]+)\/100/);
-  const totalMatch = ragContext.match(/Total Survey Respondents: (\d+)/);
   const remoteMatch = ragContext.match(/Interest in remote work.*: (\d+)%/);
 
-  const smartphone = smartphoneMatch?.[1] ?? "90";
-  const laptop = laptopMatch?.[1] ?? "45";
-  const topBarrier = barrierMatch?.[1] ?? "Cost";
-  const topBarrierScore = barrierMatch?.[2] ?? "4.2";
-  const skillsScore = skillsScoreMatch?.[1] ?? "48";
-  const techInterest = techInterestMatch?.[1] ?? "54";
-  const total = totalMatch?.[1] ?? "350";
-  const remote = remoteMatch?.[1] ?? "65";
+  const smartphone = smartphoneMatch?.[1] ?? '0';
+  const laptop = laptopMatch?.[1] ?? '0';
+  const topBarrier = barrierMatch?.[1] ?? 'Unknown';
+  const topBarrierScore = barrierMatch?.[2] ?? '0';
+  const skillsScore = skillsScoreMatch?.[1] ?? '0';
+  const techInterest = techInterestMatch?.[1] ?? '0';
+  const totalStr = totalMatch?.[1] ?? '0';
+  const remote = remoteMatch?.[1] ?? '0';
 
   if (q.includes("who are you") || q.includes("are you an ai") || q.includes("what are you") || q.includes("hello") || q.includes("hi ") || q === "hi") {
-    return `Yes, I am the AI Data Analyst Assistant for the Digital Skills for Decent Work project! I am powered by an advanced data processing engine.\n\nI have analyzed the survey responses from our target demographic in Port Harcourt. You can ask me about the skills gaps, access barriers, or how the data aligns with SDG 8 and 9.`;
+    return `Yes, I am the AI Data Analyst Assistant for the Digital Skills for Decent Work project!\n\nI have analyzed ${totalStr} survey responses from Port Harcourt. You can ask me about the skills gaps, access barriers, or how the data aligns with SDG 8 and 9.`;
   }
 
   if (q.includes("barrier") || q.includes("challenge") || q.includes("obstacle")) {
-    return `**Barrier Analysis**\n\nBased on the survey data from ${total} respondents, **${topBarrier}** is the most significant barrier to digital skills acquisition, with a severity score of **${topBarrierScore}/5**.\n\nThis finding aligns with SDG 9 Target 9.c, which calls for increasing access to ICT and ensuring affordable connectivity.\n\n**Recommended Actions:**\n• Advocate for subsidized data and device access programs\n• Partner with telecom providers for youth education bundles\n• Establish community computer labs in underserved areas like Elelenwo`;
+    return `**Barrier Analysis**\n\nBased on the survey data from ${totalStr} respondents, **${topBarrier}** is the most significant barrier to digital skills acquisition, with a severity score of **${topBarrierScore}/5**.\n\nThis finding aligns with SDG 9 Target 9.c, which calls for increasing access to ICT and ensuring affordable connectivity.`;
   }
 
   if (q.includes("skill") || q.includes("digital skill") || q.includes("proficiency")) {
@@ -242,18 +248,35 @@ function heuristicResponse(userMessage: string, ragContext: string): string {
   }
 
   if (q.includes("summary") || q.includes("overview") || q.includes("report")) {
-    return `**Executive Summary — Digital Skills for Decent Work**\n\nThis project surveyed **${total} youth** across Port Harcourt to map digital readiness for the modern economy.\n\n**Key Findings:**\n1. 📱 Smartphone access (${smartphone}%) far outpaces laptop access (${laptop}%), defining a mobile-first learning context\n2. 🎯 Digital Skills Readiness Score: **${skillsScore}/100** — foundational but insufficient for high-demand roles\n3. 🚀 Tech Career Interest: **${techInterest}/100** — appetite for growth exists\n4. 🧱 Top Barrier: **${topBarrier}** (severity ${topBarrierScore}/5) — the primary structural obstacle\n5. 🏫 School observation shows **0%** of students considered Software Engineering — an awareness crisis\n\n**SDG Alignment:**\n- SDG 8: Remote work interest (${remote}%) signals readiness for digital economy participation\n- SDG 9: Low AI/programming skills present a significant innovation gap\n\n**Priority Recommendations:**\n→ Mobile-first digital literacy programmes\n→ Subsidized device and internet access\n→ Career awareness campaigns in primary and secondary schools`;
+    return `**Executive Summary — Digital Skills for Decent Work**\n\nThis project surveyed **${totalStr} youth** across Port Harcourt to map digital readiness for the modern economy.\n\n**Key Findings:**\n1. 📱 Smartphone access (${smartphone}%) far outpaces laptop access (${laptop}%), defining a mobile-first learning context\n2. 🎯 Digital Skills Readiness Score: **${skillsScore}/100** — foundational but insufficient for high-demand roles\n3. 🚀 Tech Career Interest: **${techInterest}/100** — appetite for growth exists\n4. 🧱 Top Barrier: **${topBarrier}** (severity ${topBarrierScore}/5) — the primary structural obstacle\n5. 🏫 School observation shows **0%** of students considered Software Engineering — an awareness crisis\n\n**SDG Alignment:**\n- SDG 8: Remote work interest (${remote}%) signals readiness for digital economy participation\n- SDG 9: Low AI/programming skills present a significant innovation gap\n\n**Priority Recommendations:**\n→ Mobile-first digital literacy programmes\n→ Subsidized device and internet access\n→ Career awareness campaigns in primary and secondary schools`;
   }
 
   if (q.includes("recommend") || q.includes("action") || q.includes("policy")) {
-    return `**Evidence-Based Policy Recommendations**\n\nDerived from ${total} survey responses:\n\n**Education:**\n• Integrate digital literacy into school curriculum from primary level\n• Create career exposure programmes targeting ages 10-15 in schools like Lift Up Child Education Centre\n• Partner with universities for free weekend bootcamps in programming and data analysis\n\n**Infrastructure (SDG 9):**\n• Establish minimum 3 community tech labs per LGA in Port Harcourt\n• Negotiate subsidized educational data plans with MTN/Airtel\n• Launch device refurbishment drives collecting corporate laptops for student reuse\n\n**Employment (SDG 8):**\n• Create a youth-tech mentorship registry connecting trained youth with employers\n• Promote remote work pathways for youth in underserved areas\n• Establish micro-grant schemes for youth starting digital service businesses`;
+    return `**Evidence-Based Policy Recommendations**\n\nDerived from ${totalStr} survey responses:\n\n**Education:**\n• Integrate digital literacy into school curriculum from primary level\n• Create career exposure programmes targeting ages 10-15 in schools like Lift Up Child Education Centre\n• Partner with universities for free weekend bootcamps in programming and data analysis\n\n**Infrastructure (SDG 9):**\n• Establish minimum 3 community tech labs per LGA in Port Harcourt\n• Negotiate subsidized educational data plans with MTN/Airtel\n• Launch device refurbishment drives collecting corporate laptops for student reuse\n\n**Employment (SDG 8):**\n• Create a youth-tech mentorship registry connecting trained youth with employers\n• Promote remote work pathways for youth in underserved areas\n• Establish micro-grant schemes for youth starting digital service businesses`;
   }
 
   // Default contextual response
-  return `**AI Data Analyst Response**\n\nBased on the survey data from **${total} respondents** in Port Harcourt, I can help analyze any aspect of the "Digital Skills for Decent Work" research.\n\nYou can ask me about:\n• 📊 **Digital skills** proficiency and gaps\n• 🌐 **Device and internet access** patterns\n• 💼 **Career awareness** and employment readiness\n• 🧱 **Barriers** to learning digital skills\n• 🎓 **School observation** findings (Lift Up Child Education Centre)\n• 📋 **SDG 8 or SDG 9** specific impact analysis\n• 📝 Generate an **executive summary** or policy brief\n\nWhat specific aspect of the data would you like to explore?`;
+  return `**AI Data Analyst Response**\n\nBased on the survey data from **${totalStr} respondents** in Port Harcourt, I can help analyze any aspect of the "Digital Skills for Decent Work" research.\n\nYou can ask me about:\n• 📊 **Digital skills** proficiency and gaps\n• 🌐 **Device and internet access** patterns\n• 💼 **Career awareness** and employment readiness\n• 🧱 **Barriers** to learning digital skills\n• 📋 **SDG 8 or SDG 9** specific impact analysis\n• 📝 Generate an **executive summary** or policy brief\n\nWhat specific aspect of the data would you like to explore?`;
 }
 
 function heuristicInsights(pageName: string, ragContext: string): AIInsightSet {
+  // Guard: never fabricate data when no survey responses exist
+  const totalMatch = ragContext.match(/Total Survey Respondents: (\d+)/);
+  const total = parseInt(totalMatch?.[1] ?? '0', 10);
+
+  if (total === 0 || ragContext.includes('No survey data is currently available')) {
+    const noDataSet: AIInsightSet = {
+      keyFindings: ['No survey data is currently available. Synchronize Google Sheets data or upload a CSV to generate evidence-based insights.'],
+      trendAnalysis: ['Insights will appear here once real survey data has been loaded.'],
+      recommendations: ['Connect your Google Sheets data source or upload a CSV export from Google Forms to generate grounded recommendations.'],
+      sdgMapping: {
+        sdg8: ['SDG 8 analysis requires real survey data.'],
+        sdg9: ['SDG 9 analysis requires real survey data.'],
+      },
+    };
+    return noDataSet;
+  }
+
   const page = pageName.toLowerCase();
 
   const smartphoneMatch = ragContext.match(/Smartphone ownership: (\d+)%/);
@@ -261,21 +284,20 @@ function heuristicInsights(pageName: string, ragContext: string): AIInsightSet {
   const barrierMatch = ragContext.match(/1\. (\w[\w ]+): ([\d.]+)\/5/);
   const skillsScoreMatch = ragContext.match(/Digital Skills Readiness Score: ([\d.]+)\/100/);
   const techInterestMatch = ragContext.match(/Technology Career Interest Score: ([\d.]+)\/100/);
-  const totalMatch = ragContext.match(/Total Survey Respondents: (\d+)/);
   const remoteMatch = ragContext.match(/Interest in remote work.*: (\d+)%/);
 
-  const smartphone = smartphoneMatch?.[1] ?? "90";
-  const laptop = laptopMatch?.[1] ?? "45";
-  const topBarrier = barrierMatch?.[1] ?? "Cost";
-  const skillsScore = skillsScoreMatch?.[1] ?? "48";
-  const techInterest = techInterestMatch?.[1] ?? "54";
-  const total = totalMatch?.[1] ?? "350";
-  const remote = remoteMatch?.[1] ?? "65";
+  const smartphone = smartphoneMatch?.[1] ?? '0';
+  const laptop = laptopMatch?.[1] ?? '0';
+  const topBarrier = barrierMatch?.[1] ?? 'Unknown';
+  const skillsScore = skillsScoreMatch?.[1] ?? '0';
+  const techInterest = techInterestMatch?.[1] ?? '0';
+  const totalStr = totalMatch?.[1] ?? '0';
+  const remote = remoteMatch?.[1] ?? '0';
 
   const insightMap: Record<string, AIInsightSet> = {
     overview: {
       keyFindings: [
-        `${total} youth surveyed across Port Harcourt, revealing a critical digital skills gap with a readiness score of ${skillsScore}/100.`,
+        `${totalStr} youth surveyed across Port Harcourt, revealing a critical digital skills gap with a readiness score of ${skillsScore}/100.`,
         `Smartphone penetration (${smartphone}%) is dramatically higher than laptop access (${laptop}%), defining a mobile-first digital reality.`,
         `${topBarrier} is the leading systemic barrier preventing youth from acquiring digital skills needed for decent work.`,
       ],
