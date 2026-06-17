@@ -9,7 +9,7 @@ export function ReportGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [report, setReport] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { data } = useData();
+  const { data, analytics } = useData();
 
   const handleGenerate = async () => {
     if (!data || data.length === 0) {
@@ -29,6 +29,7 @@ export function ReportGenerator() {
         body: JSON.stringify({
           messages: [{ role: "user", content: `Generate a comprehensive executive summary report covering all aspects of the digital skills survey: demographics, access, skills, barriers, and SDG alignment. Format it clearly with headings and bullet points. IMPORTANT: Include markdown tables that explicitly map your key findings and metrics back to the specific survey question numbers (e.g., Q11, Q23) that generated them. ${notice}` }],
           data,
+          analytics,
           isReportGeneration: true
         }),
       });
@@ -60,8 +61,39 @@ export function ReportGenerator() {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:bg-white print:p-0">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col print:shadow-none print:max-w-none print:max-h-none print:h-auto">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:static print:bg-white print:p-0 print:block">
+          <style type="text/css" media="print">
+            {`
+              body * {
+                visibility: hidden;
+              }
+
+              #printable-report,
+              #printable-report * {
+                visibility: visible;
+              }
+
+              #printable-report {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+              }
+
+              h1, h2, h3 {
+                break-after: avoid;
+                page-break-after: avoid;
+              }
+
+              p, li, .report-section {
+                break-inside: avoid;
+                page-break-inside: avoid;
+              }
+            `}
+          </style>
+          <div id="printable-report" className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col print:shadow-none print:max-w-none print:max-h-none print:h-auto print:block print:overflow-visible">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b print:hidden">
               <div className="flex items-center gap-3">
@@ -137,20 +169,27 @@ export function ReportGenerator() {
 
             {/* Footer */}
             {report && (
-              <div className="p-6 border-t bg-slate-50 rounded-b-2xl flex justify-end gap-4 print:hidden">
-                <button
-                  onClick={handleGenerate}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition font-medium"
-                >
-                  Regenerate
-                </button>
-                <button
-                  onClick={handlePrint}
-                  className="px-4 py-2 bg-[#8F1838] text-white rounded-lg shadow-sm hover:bg-[#8F1838]/90 transition font-medium flex items-center gap-2"
-                >
-                  <Download size={18} />
-                  Print / Save PDF
-                </button>
+              <div className="p-6 border-t bg-slate-50 rounded-b-2xl flex flex-col sm:flex-row justify-between items-center gap-4 print:hidden">
+                <div className="text-xs text-slate-500 font-medium bg-slate-200/50 p-2 rounded border border-slate-200">
+                  <span className="block mb-1 text-slate-700">🖨️ For best PDF export:</span>
+                  1. Print Dialog → More Settings<br/>
+                  2. Disable: ☑ Headers and Footers
+                </div>
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleGenerate}
+                    className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition font-medium"
+                  >
+                    Regenerate
+                  </button>
+                  <button
+                    onClick={handlePrint}
+                    className="px-4 py-2 bg-[#8F1838] text-white rounded-lg shadow-sm hover:bg-[#8F1838]/90 transition font-medium flex items-center gap-2"
+                  >
+                    <Download size={18} />
+                    Print / Save PDF
+                  </button>
+                </div>
               </div>
             )}
           </div>
