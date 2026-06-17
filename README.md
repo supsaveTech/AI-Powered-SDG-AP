@@ -30,7 +30,7 @@ The platform transforms raw survey responses into evidence-based visual analytic
 
 ## Key Features
 
-- **Real-Time Google Sheets Sync** — Live survey data via Google Sheets API; CSV upload fallback available.
+- **Real-Time Google Sheets Sync** — Live survey data via Google Sheets API and Google Sheets CSV URL; CSV upload fallback available.
 - **10 Analytics Dashboard Modules** — Demographics, Digital Access, Skills, AI Awareness, Career Awareness, Employment Readiness, Barriers, Recommendations, Case Study, Methodology.
 - **AI Insights Engine** — Page-specific structured insights (key findings, trends, recommendations, SDG mapping) per dashboard section.
 - **AI Report Generator** — On-demand 11-section executive research report with full survey question traceability.
@@ -103,27 +103,31 @@ npm run build && npm start
 
 ---
 
-## Documentation
+## Platform Preview
 
-Detailed technical documentation is in the [`/docs`](./docs) directory:
+### Dashboard Overview
 
-| Document | Description |
-|----------|-------------|
-| [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture, data flow, and component overview |
-| [DATA_CONTEXT.md](./docs/DATA_CONTEXT.md) | Single Source of Truth analytics system |
-| [GOOGLE_SHEETS_INTEGRATION.md](./docs/GOOGLE_SHEETS_INTEGRATION.md) | Google Sheets sync, parser, and CSV fallback |
-| [AI_INSIGHTS_ENGINE.md](./docs/AI_INSIGHTS_ENGINE.md) | AI insights, report generator, and heuristic fallback |
-| [ADMIN_DIAGNOSTICS.md](./docs/ADMIN_DIAGNOSTICS.md) | Admin panel features and diagnostics |
+![Dashboard](docs/screenshots/dashboard-overview.png)
 
----
+### AI Insights Engine
 
-## Roadmap
+![AI Insights](docs/screenshots/ai-insights-engine.png)
 
-- [ ] Multi-language (i18n) support
-- [ ] Excel/JSON export formats
-- [ ] Longitudinal tracking across survey editions
-- [ ] Stratified sampling support for future surveys
-- [ ] Additional Rivers State LGA coverage
+### Digital Access Analytics
+
+![Digital Access](docs/screenshots/digital-access.png)
+
+### Employment Readiness Analytics
+
+![Employment Readiness](docs/screenshots/employment-readiness.png)
+
+### AI Report Generator
+
+![Report Generator](docs/screenshots/report-generator.png)
+
+### Admin Diagnostics
+
+![Admin Dashboard](docs/screenshots/admin-dashboard.png)
 
 ---
 

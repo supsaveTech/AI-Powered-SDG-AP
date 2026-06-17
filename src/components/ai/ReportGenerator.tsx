@@ -46,8 +46,26 @@ export function ReportGenerator() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const element = document.getElementById('pdf-report');
+      if (!element) return;
+      
+      const opt: any = {
+        margin: 15,
+        filename: 'Digital-Skills-For-Decent-Work.pdf',
+        image: { type: 'jpeg', quality: 1 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      };
+      
+      html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      setError("Failed to generate PDF. Please try again.");
+    }
   };
 
   return (
@@ -61,42 +79,10 @@ export function ReportGenerator() {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:static print:bg-white print:p-0 print:block">
-          <style type="text/css" media="print">
-            {`
-              body * {
-                visibility: hidden;
-              }
-
-              #printable-report,
-              #printable-report * {
-                visibility: visible;
-              }
-
-              #printable-report {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100vw !important;
-                max-width: 100vw !important;
-                margin: 0;
-                padding: 0;
-              }
-
-              h1, h2, h3 {
-                break-after: avoid;
-                page-break-after: avoid;
-              }
-
-              p, li, .report-section {
-                break-inside: avoid;
-                page-break-inside: avoid;
-              }
-            `}
-          </style>
-          <div id="printable-report" className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col print:w-screen print:max-w-none print:h-auto print:block print:overflow-visible print:shadow-none">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b print:hidden">
+            <div className="flex items-center justify-between p-6 border-b">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10">
                   <FileText className="h-5 w-5 text-indigo-600" />
@@ -112,7 +98,13 @@ export function ReportGenerator() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6 lg:p-10 print:p-0 print:overflow-visible">
+            <div className="flex-1 overflow-y-auto p-6 lg:p-10">
+              {error && (
+                <div className="mb-6 bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <p className="text-sm">{error}</p>
+                </div>
+              )}
               {(!data || data.length === 0) ? (
                 <div className="p-6">
                   <div className="bg-white/80 rounded-lg p-6 border border-amber-200 text-center flex flex-col items-center">
@@ -125,7 +117,7 @@ export function ReportGenerator() {
               ) : (
                 <>
                   {!report && !isGenerating && (
-                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20 print:hidden">
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20">
                       <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center border-2 border-dashed border-slate-200">
                         <FileText size={40} className="text-slate-400" />
                       </div>
@@ -145,7 +137,7 @@ export function ReportGenerator() {
                   )}
 
                   {isGenerating && (
-                    <div className="h-full flex flex-col items-center justify-center space-y-6 py-20 print:hidden">
+                    <div className="h-full flex flex-col items-center justify-center space-y-6 py-20">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-[#FD6925] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                         <div className="w-3 h-3 bg-[#FD6925] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
@@ -156,12 +148,18 @@ export function ReportGenerator() {
                   )}
 
                   {report && (
-                    <div className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-a:text-[#FD6925]">
-                      <div className="hidden print:block mb-8">
-                        <h1 className="text-3xl font-bold text-slate-900 border-b pb-4">Executive Summary: Digital Skills for Decent Work</h1>
+                    <div id="pdf-report" className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-a:text-[#FD6925] bg-white p-4">
+                      <div className="mb-8 border-b pb-4">
+                        <h1 className="text-3xl font-bold text-slate-900">Executive Summary: Digital Skills for Decent Work</h1>
                         <p className="text-slate-500 mt-2">Generated by AI Data Analyst • {new Date().toLocaleDateString()}</p>
                       </div>
-                      <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">{report}</div>
+                      <div className="whitespace-pre-wrap text-slate-700 leading-relaxed text-base">
+                        {report.split(/(?=###? )/).map((section, idx) => (
+                          <div key={idx} className="report-section mb-6" style={{ pageBreakInside: 'avoid' }}>
+                            {section}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </>
@@ -170,27 +168,20 @@ export function ReportGenerator() {
 
             {/* Footer */}
             {report && (
-              <div className="p-6 border-t bg-slate-50 rounded-b-2xl flex flex-col sm:flex-row justify-between items-center gap-4 print:hidden">
-                <div className="text-xs text-slate-500 font-medium bg-slate-200/50 p-2 rounded border border-slate-200">
-                  <span className="block mb-1 text-slate-700">🖨️ For best PDF export:</span>
-                  1. Print Dialog → More Settings<br/>
-                  2. Disable: ☑ Headers and Footers
-                </div>
-                <div className="flex gap-4">
-                  <button
-                    onClick={handleGenerate}
-                    className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition font-medium"
-                  >
-                    Regenerate
-                  </button>
-                  <button
-                    onClick={handlePrint}
-                    className="px-4 py-2 bg-[#8F1838] text-white rounded-lg shadow-sm hover:bg-[#8F1838]/90 transition font-medium flex items-center gap-2"
-                  >
-                    <Download size={18} />
-                    Print / Save PDF
-                  </button>
-                </div>
+              <div className="p-6 border-t bg-slate-50 rounded-b-2xl flex justify-end gap-4">
+                <button
+                  onClick={handleGenerate}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition font-medium"
+                >
+                  Regenerate
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="px-4 py-2 bg-[#8F1838] text-white rounded-lg shadow-sm hover:bg-[#8F1838]/90 transition font-medium flex items-center gap-2"
+                >
+                  <Download size={18} />
+                  Download PDF
+                </button>
               </div>
             )}
           </div>
