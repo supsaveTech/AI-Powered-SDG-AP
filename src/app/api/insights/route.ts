@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { generatePageInsights } from "@/services/aiService";
 import { buildPageContext } from "@/utils/ragContextBuilder";
 import { SurveyResponse } from "@/types";
+import { AnalyticsContextType } from "@/contexts/DataContext";
 
 export async function POST(req: Request) {
   try {
-    const { data, pageName } = await req.json();
+    const { data, pageName, analytics } = await req.json();
 
     if (!data || !Array.isArray(data)) {
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 });
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
     }
 
     // Build RAG context from the client-provided data
-    const ragContext = buildPageContext(data as SurveyResponse[], pageName);
+    const ragContext = buildPageContext(data as SurveyResponse[], pageName, analytics as AnalyticsContextType | null);
 
     // Generate insights via AI service (LLM or heuristic engine)
     const insights = await generatePageInsights(pageName, ragContext);

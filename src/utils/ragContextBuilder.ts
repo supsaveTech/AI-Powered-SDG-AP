@@ -1,22 +1,17 @@
 import { SurveyResponse } from "../types";
+import { AnalyticsContextType } from "../contexts/DataContext";
 import {
-  calculateDigitalSkillsReadiness,
-  calculateCareerAwarenessScore,
-  calculateEmploymentReadiness,
-  calculateAIReadinessIndex,
-  calculateDigitalAccessIndex,
   calculateBarrierSeverity,
   getDemographics,
   getAIAwarenessMetrics,
-  getInfrastructureMetrics
+  getInfrastructureMetrics,
 } from "./dataAggregation";
 
 /**
  * Builds a rich textual context summary from aggregated survey data.
- * This is injected as the RAG context into AI system prompts so the
- * AI can answer questions grounded in real data.
+ * Accepts pre-computed analytics from DataContext as SSOT to avoid redundant calculations.
  */
-export function buildRAGContext(data: SurveyResponse[]): string {
+export function buildRAGContext(data: SurveyResponse[], analytics?: AnalyticsContextType | null): string {
   if (!data || data.length === 0) {
     return "No survey data is currently available.";
   }
@@ -27,29 +22,34 @@ export function buildRAGContext(data: SurveyResponse[]): string {
   const aiMetrics = getAIAwarenessMetrics(data);
   const infraMetrics = getInfrastructureMetrics(data);
 
-  const digitalSkillsScore = calculateDigitalSkillsReadiness(data).toFixed(1);
-  const techInterestScore = calculateCareerAwarenessScore(data).toFixed(1);
-  const employmentReadinessScore = calculateEmploymentReadiness(data).toFixed(1);
-  const aiReadinessScore = calculateAIReadinessIndex(data).toFixed(1);
-  const accessScore = calculateDigitalAccessIndex(data).toFixed(1);
+  // Use SSOT analytics from DataContext if available, otherwise fall back to on-the-fly calculation
+  const smartphonePct = analytics?.smartphonePct ?? Math.round((data.filter(d => d.ownsSmartphone).length / total) * 100);
+  const laptopPct = analytics?.laptopPct ?? Math.round((data.filter(d => d.ownsLaptop).length / total) * 100);
+  const tabletPct = analytics?.tabletPct ?? Math.round((data.filter(d => d.hasTabletAccess).length / total) * 100);
+  const desktopPct = analytics?.desktopPct ?? Math.round((data.filter(d => d.hasDesktopAccess).length / total) * 100);
+  const remoteWorkPct = analytics?.remoteWorkInterest ?? Math.round((data.filter(d => {
+    const interest = String(d.interestInRemoteWork).toLowerCase();
+    return interest.includes('agree') || interest.includes('strongly agree') || interest.includes('yes');
+  }).length / total) * 100);
+  const digitalSkillsScore = analytics?.digitalSkillsReadiness?.toFixed(1) ?? '0';
+  const techInterestScore = analytics?.careerAwarenessScore?.toFixed(1) ?? '0';
+  const employmentReadinessScore = analytics?.employmentReadinessIndex?.toFixed(1) ?? '0';
+  const aiReadinessScore = analytics?.aiReadinessIndex?.toFixed(1) ?? '0';
+  const accessScore = analytics?.digitalAccessIndex?.toFixed(1) ?? '0';
+  const topBarrierName = analytics?.topBarrier ?? (barriers.length > 0 ? barriers[0].name : 'Unknown');
+  const topPowerSource = analytics?.topPowerSource ?? infraMetrics.powerSource[0]?.name ?? 'Unknown';
 
   const topGender = demographics.gender[0];
   const topLocation = demographics.location[0];
 
-  const goodInternetPct = infraMetrics.electricityReliability
-    .filter(i => i.name.toLowerCase().includes('good') || i.name.toLowerCase().includes('excellent'))
-    .reduce((acc, curr) => acc + curr.value, 0) / total * 100;
-
-  const smartphonePct = Math.round((data.filter(d => d.ownsSmartphone).length / total) * 100);
-  const laptopPct = Math.round((data.filter(d => d.ownsLaptop).length / total) * 100);
-  const remoteWorkPct = Math.round((data.filter(d => {
-    const interest = String(d.interestInRemoteWork).toLowerCase();
-    return interest.includes('agree') || interest.includes('strongly agree') || interest.includes('yes');
-  }).length / total) * 100);
+  // Community distribution for narrative reports
+  const communityDist = demographics.location
+    .slice(0, 5)
+    .map((l, i) => `${i + 1}. ${l.name}: ${Math.round((l.value / total) * 100)}%`)
+    .join('\n');
 
   const notice = "Based on responses collected from youths in Port Harcourt...";
 
-  // --- Build context string ---
   const context = `
 === DATA SOURCE NOTICE ===
 ${notice}
@@ -61,13 +61,16 @@ Total Survey Respondents: ${total}
 === DEMOGRAPHICS ===
 - Predominant gender: ${topGender?.name} (${Math.round(((topGender?.value || 0) / total) * 100)}%) [Source: Q2]
 - Top location: ${topLocation?.name} (${Math.round(((topLocation?.value || 0) / total) * 100)}%) [Source: Q3]
+- Communities covered:
+${communityDist}
 
 === DIGITAL ACCESS & INFRASTRUCTURE [Q6-Q15] ===
 - Digital Access Index: ${accessScore}/100
 - Smartphone ownership: ${smartphonePct}%
 - Laptop ownership: ${laptopPct}%
-- Good/Excellent Electricity Reliability: ${goodInternetPct.toFixed(1)}% [Source: Q12]
-- Top Power Source: ${infraMetrics.powerSource[0]?.name || 'Unknown'} [Source: Q13]
+- Tablet ownership: ${tabletPct}%
+- Desktop ownership: ${desktopPct}%
+- Top Power Source: ${topPowerSource} [Source: Q12]
 
 === DIGITAL SKILLS [Q16-Q18] ===
 - Digital Skills Readiness Score: ${digitalSkillsScore}/100
@@ -85,6 +88,7 @@ Total Survey Respondents: ${total}
 - Interest in remote work: ${remoteWorkPct}%
 
 === BARRIERS TO LEARNING [Q28-Q29] ===
+Top Barrier: ${topBarrierName}
 Top Barriers (severity 1-5):
 ${barriers.slice(0, 5).map((b, i) => `${i + 1}. ${b.name}: ${b.score.toFixed(2)}/5`).join("\n")}
 
@@ -98,7 +102,7 @@ ${barriers.slice(0, 5).map((b, i) => `${i + 1}. ${b.name}: ${b.score.toFixed(2)}
 /**
  * Builds a focused context snippet for a specific page of the dashboard.
  */
-export function buildPageContext(data: SurveyResponse[], page: string): string {
-  const base = buildRAGContext(data);
+export function buildPageContext(data: SurveyResponse[], page: string, analytics?: AnalyticsContextType | null): string {
+  const base = buildRAGContext(data, analytics);
   return `${base}\n\n=== CURRENT PAGE FOCUS ===\nYou are analyzing the "${page}" section of the dashboard. Tailor your insights specifically to this topic.`;
 }

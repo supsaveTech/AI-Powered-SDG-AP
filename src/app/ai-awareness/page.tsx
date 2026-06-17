@@ -122,7 +122,7 @@ export default function AIAwarenessPage() {
         </p>
       </div>
 
-      <AIInsights data={data} pageName="AI Awareness" />
+      <AIInsights data={data} analytics={analytics} pageName="AI Awareness" />
     </div>
   );
 }

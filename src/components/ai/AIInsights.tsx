@@ -5,12 +5,15 @@ import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, AlertCircle, Bot, Zap, 
 import { SurveyResponse } from '@/types';
 import { AIInsightSet } from '@/services/aiService';
 
+import { AnalyticsContextType } from '@/contexts/DataContext';
+
 interface AIInsightsProps {
   pageName: string;
   data: SurveyResponse[];
+  analytics?: AnalyticsContextType | null;
 }
 
-export function AIInsights({ pageName, data }: AIInsightsProps) {
+export function AIInsights({ pageName, data, analytics }: AIInsightsProps) {
   const [insights, setInsights] = useState<AIInsightSet | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +31,7 @@ export function AIInsights({ pageName, data }: AIInsightsProps) {
         const res = await fetch('/api/insights', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pageName, data })
+          body: JSON.stringify({ pageName, data, analytics })
         });
         
         if (!res.ok) {
@@ -48,7 +51,7 @@ export function AIInsights({ pageName, data }: AIInsightsProps) {
     }
 
     fetchInsights();
-  }, [data, pageName]);
+  }, [data, pageName, analytics]);
 
   if (!data || data.length === 0 || error === "No survey data available. Connect Google Sheets or upload a CSV to generate AI insights.") {
     return (

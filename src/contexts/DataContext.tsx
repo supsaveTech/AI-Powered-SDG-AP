@@ -24,6 +24,13 @@ export interface AnalyticsContextType {
   careerAwarenessScore: number;
   employmentReadinessIndex: number;
   topBarrier: string;
+  topBarrierScore: number;
+  smartphonePct: number;
+  laptopPct: number;
+  tabletPct: number;
+  desktopPct: number;
+  goodInternetPct: number;
+  topPowerSource: string;
 }
 
 interface DataContextState {
@@ -58,25 +65,51 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const remoteWorkInterest = Math.round((remoteInterestCount / (totalRespondents || 1)) * 100);
 
     const digitalSkillsScore = Math.round(calculateDigitalSkillsReadiness(dataset));
-    const techInterestScore = Math.round(calculateCareerAwarenessScore(dataset));
-    const employmentReadinessScore = Math.round(calculateEmploymentReadiness(dataset));
-    const aiReadinessScore = Math.round(calculateAIReadinessIndex(dataset));
-    const digitalAccessScore = Math.round(calculateDigitalAccessIndex(dataset));
-    
+    const careerAwarenessScore = Math.round(calculateCareerAwarenessScore(dataset));
+    const employmentReadinessIndex = Math.round(calculateEmploymentReadiness(dataset));
+    const aiReadinessIndex = Math.round(calculateAIReadinessIndex(dataset));
+    const digitalAccessIndex = Math.round(calculateDigitalAccessIndex(dataset));
     const barrierMetrics = getBarrierMetrics(dataset);
-    const topBarrier = barrierMetrics.length > 0 ? barrierMetrics[0].name : "Unknown";
+    const topBarrier = barrierMetrics.length > 0 ? barrierMetrics[0].name : 'Unknown';
+    const topBarrierScore = barrierMetrics.length > 0 ? barrierMetrics[0].score : 0;
+
+    const smartphonePct = Math.round((dataset.filter(d => d.ownsSmartphone).length / totalRespondents) * 100);
+    const laptopPct = Math.round((dataset.filter(d => d.ownsLaptop).length / totalRespondents) * 100);
+    const tabletPct = Math.round((dataset.filter(d => d.hasTabletAccess).length / totalRespondents) * 100);
+    const desktopPct = Math.round((dataset.filter(d => d.hasDesktopAccess).length / totalRespondents) * 100);
+
+    const goodInternetCount = dataset.filter(d => {
+      const rel = String(d.electricityReliability || '').toLowerCase();
+      return rel.includes('good') || rel.includes('excellent');
+    }).length;
+    const goodInternetPct = Math.round((goodInternetCount / totalRespondents) * 100);
+    
+    // Determine top power source
+    const powerSources = dataset.reduce((acc, curr) => {
+      const ps = curr.powerSource || 'Unknown';
+      acc[ps] = (acc[ps] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    const topPowerSource = Object.entries(powerSources).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Unknown';
 
     return {
       totalRespondents,
       communitiesReached,
       aiAdoptionRate,
       remoteWorkInterest,
-      digitalAccessIndex: digitalAccessScore,
+      digitalAccessIndex,
       digitalSkillsReadiness: digitalSkillsScore,
-      aiReadinessIndex: aiReadinessScore,
-      careerAwarenessScore: techInterestScore,
-      employmentReadinessIndex: employmentReadinessScore,
-      topBarrier
+      aiReadinessIndex,
+      careerAwarenessScore,
+      employmentReadinessIndex,
+      topBarrier,
+      topBarrierScore,
+      smartphonePct,
+      laptopPct,
+      tabletPct,
+      desktopPct,
+      goodInternetPct,
+      topPowerSource
     };
   };
 

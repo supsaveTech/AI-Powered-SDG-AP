@@ -153,7 +153,7 @@ export default function OverviewPage() {
         </ul>
       </div>
 
-      <AIInsights data={data} pageName="Overview" />
+      <AIInsights data={data} analytics={analytics} pageName="Overview" />
     </div>
   );
 }

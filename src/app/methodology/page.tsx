@@ -5,7 +5,7 @@ import { AlertCircle } from "lucide-react";
 import { AIInsights } from "@/components/ai/AIInsights";
 
 export default function MethodologyPage() {
-  const { data, isInitializing } = useData();
+  const { data, analytics, isInitializing } = useData();
 
   if (isInitializing) {
     return (
@@ -118,7 +118,7 @@ export default function MethodologyPage() {
         </div>
       </div>
 
-      <AIInsights data={data} pageName="Methodology" />
+      <AIInsights data={data} analytics={analytics} pageName="Methodology" />
     </div>
   );
 }

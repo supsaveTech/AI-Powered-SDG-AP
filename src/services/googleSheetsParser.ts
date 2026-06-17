@@ -101,7 +101,7 @@ export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
   const idxInternetLoc      = getIndex(['where do you mostly', 'mostly access the internet', 'location'], 10);
   const idxElectricityRel   = getIndex(['reliable is electricity', 'electricity in your area', 'power supply'], 11);
   const idxPowerSource      = getIndex(['primarily power', 'power your digital', 'generator', 'grid'], 12);
-  const idxElectricityImpact= getIndex(['unreliable electricity affect', 'electricity affect', 'impact'], 13);
+  const idxElectricityImpact= getIndex(['unreliable electricity affect', 'electricity affect', 'affect your ability to learn'], 13);
   const idxDataCost         = getIndex(['spend monthly', 'monthly on internet', 'data access', 'cost'], 14);
 
   // Digital Skills
@@ -122,7 +122,7 @@ export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
 
   // Employment Readiness
   const idxWorkType         = getIndex(['type of work', 'work are you most interested', 'work arrangement', 'remote'], 25);
-  const idxDesiredSkills    = getIndex(['digital skills would you most like', 'skills would you most like', 'learn', 'desired'], 26);
+  const idxDesiredSkills    = getIndex(['digital skills would you most like', 'skills would you most like', 'skills to learn', 'desired skills'], 26);
 
   // Barriers
   const idxBarriers         = getIndex(['prevents you from learning digital skills', 'from learning digital skills', 'learning digital skills'], 27);

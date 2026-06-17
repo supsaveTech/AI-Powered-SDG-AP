@@ -133,7 +133,7 @@ export default function BarriersPage() {
         </div>
       </div>
 
-      <AIInsights data={data} pageName="Barriers" />
+      <AIInsights data={data} analytics={analytics} pageName="Barriers" />
     </div>
   );
 }

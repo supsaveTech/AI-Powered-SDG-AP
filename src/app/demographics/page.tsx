@@ -9,7 +9,7 @@ import DataSourceTag from "@/components/ui/DataSourceTag";
 import { MapPin, AlertCircle } from "lucide-react";
 
 export default function DemographicsPage() {
-  const { data, isInitializing } = useData();
+  const { data, analytics, isInitializing } = useData();
 
   if (isInitializing) {
     return (
@@ -143,7 +143,7 @@ export default function DemographicsPage() {
         </div>
       </div>
 
-      <AIInsights data={data} pageName="Demographics" />
+      <AIInsights data={data} analytics={analytics} pageName="Demographics" />
     </div>
   );
 }

@@ -139,7 +139,7 @@ export default function CareerAwarenessPage() {
         </p>
       </div>
 
-      <AIInsights data={data} pageName="Career Awareness" />
+      <AIInsights data={data} analytics={analytics} pageName="Career Awareness" />
     </div>
   );
 }

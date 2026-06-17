@@ -140,7 +140,7 @@ export default function DigitalAccessPage() {
         </p>
       </div>
 
-      <AIInsights data={data} pageName="Digital Access" />
+      <AIInsights data={data} analytics={analytics} pageName="Digital Access" />
     </div>
   );
 }

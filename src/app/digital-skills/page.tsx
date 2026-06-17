@@ -150,7 +150,7 @@ export default function DigitalSkillsPage() {
         </div>
       </div>
 
-      <AIInsights data={data} pageName="Digital Skills" />
+      <AIInsights data={data} analytics={analytics} pageName="Digital Skills" />
     </div>
   );
 }

@@ -114,7 +114,7 @@ export default function RecommendationsPage() {
         <DataSourceTag questionNumbers={[30, 31]} />
       </div>
 
-      <AIInsights data={data} pageName="Recommendations" />
+      <AIInsights data={data} analytics={analytics} pageName="Recommendations" />
     </div>
   );
 }

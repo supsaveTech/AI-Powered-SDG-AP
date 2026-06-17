@@ -132,7 +132,7 @@ export default function EmploymentReadinessPage() {
         </div>
       </div>
 
-      <AIInsights data={data} pageName="Employment Readiness" />
+      <AIInsights data={data} analytics={analytics} pageName="Employment Readiness" />
     </div>
   );
 }
