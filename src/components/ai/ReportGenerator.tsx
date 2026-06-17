@@ -77,7 +77,8 @@ export function ReportGenerator() {
                 position: absolute;
                 left: 0;
                 top: 0;
-                width: 100%;
+                width: 100vw !important;
+                max-width: 100vw !important;
                 margin: 0;
                 padding: 0;
               }
@@ -93,7 +94,7 @@ export function ReportGenerator() {
               }
             `}
           </style>
-          <div id="printable-report" className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col print:shadow-none print:max-w-none print:max-h-none print:h-auto print:block print:overflow-visible">
+          <div id="printable-report" className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col print:w-screen print:max-w-none print:h-auto print:block print:overflow-visible print:shadow-none">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b print:hidden">
               <div className="flex items-center gap-3">

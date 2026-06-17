@@ -1,3 +1,5 @@
+import { AnalyticsContextType } from "@/contexts/DataContext";
+
 /**
  * AI Service Layer
  *
@@ -35,7 +37,8 @@ const AI_PROVIDER = process.env.OPENAI_API_KEY ? "openai" :
 export async function sendChatMessage(
   messages: AIMessage[],
   ragContext: string,
-  isReportGeneration?: boolean
+  isReportGeneration?: boolean,
+  analytics?: AnalyticsContextType | null
 ): Promise<string> {
   const systemMessage: AIMessage = {
     role: "system",
@@ -54,7 +57,7 @@ export async function sendChatMessage(
 
   // Heuristic fallback
   if (isReportGeneration) {
-    return generateHeuristicReport(ragContext);
+    return generateHeuristicReport(ragContext, analytics);
   }
   return heuristicResponse(messages[messages.length - 1]?.content ?? "", ragContext);
 }
@@ -263,54 +266,55 @@ function heuristicResponse(userMessage: string, ragContext: string): string {
   return `**AI Data Analyst Response**\n\nBased on the survey data from **${totalStr} respondents** in Port Harcourt, I can help analyze any aspect of the "Digital Skills for Decent Work" research.\n\nYou can ask me about:\n• 📊 **Digital skills** proficiency and gaps\n• 🌐 **Device and internet access** patterns\n• 💼 **Career awareness** and employment readiness\n• 🧱 **Barriers** to learning digital skills\n• 📋 **SDG 8 or SDG 9** specific impact analysis\n• 📝 Generate an **executive summary** or policy brief\n\nWhat specific aspect of the data would you like to explore?`;
 }
 
-function generateHeuristicReport(ragContext: string): string {
+function generateHeuristicReport(ragContext: string, analytics?: AnalyticsContextType | null): string {
   const totalMatch = ragContext.match(/Total Survey Respondents: (\d+)/);
-  const totalStr = totalMatch?.[1] ?? '0';
+  const totalStr = totalMatch?.[1] ?? (analytics?.totalRespondents?.toString() ?? '0');
 
-  const smartphoneMatch = ragContext.match(/Smartphone ownership: (\d+)%/);
-  const laptopMatch = ragContext.match(/Laptop ownership: (\d+)%/);
-  const tabletMatch = ragContext.match(/Tablet ownership: (\d+)%/);
-  const desktopMatch = ragContext.match(/Desktop ownership: (\d+)%/);
-  const barrierMatch = ragContext.match(/1\. ([\w][\w ]+): ([\d.]+)\/5/);
-  const barrier2Match = ragContext.match(/2\. ([\w][\w ]+): ([\d.]+)\/5/);
-  const barrier3Match = ragContext.match(/3\. ([\w][\w ]+): ([\d.]+)\/5/);
-  const skillsScoreMatch = ragContext.match(/Digital Skills Readiness Score: ([\d.]+)\/100/);
-  const techInterestMatch = ragContext.match(/Technology Career Interest Score: ([\d.]+)\/100/);
-  const employmentMatch = ragContext.match(/Employment Readiness Index: ([\d.]+)\/100/);
-  const aiReadinessMatch = ragContext.match(/AI Readiness Index: ([\d.]+)\/100/);
-  const aiAdoptionMatch = ragContext.match(/AI Adoption Rate.*: ([\d.]+)%/);
-  const accessMatch = ragContext.match(/Digital Access Index: ([\d.]+)\/100/);
-  const remoteMatch = ragContext.match(/Interest in remote work.*: (\d+)%/);
-  const topLocationMatch = ragContext.match(/Top location: ([\w ]+) \(([\d]+)%\)/);
-  const genderMatch = ragContext.match(/Predominant gender: ([\w ]+) \(([\d]+)%\)/);
-  const powerSourceMatch = ragContext.match(/Top Power Source: ([^\[\n]+)/);
-  const topAIToolsMatch = ragContext.match(/Top AI Tools: ([^\n]+)/);
-
-  // Extract community distribution block
+  // Extract community distribution block and other narrative elements from RAG context
   const communityBlock = ragContext.match(/Communities covered:\n([\s\S]+?)\n\n/);
   const communityList = communityBlock?.[1]?.trim() ?? '';
+  const topLocationMatch = ragContext.match(/Top location: ([\w ]+) \(([\d]+)%\)/);
+  const genderMatch = ragContext.match(/Predominant gender: ([\w ]+) \(([\d]+)%\)/);
+  const topAIToolsMatch = ragContext.match(/Top AI Tools: ([^\n]+)/);
 
-  const smartphone = parseInt(smartphoneMatch?.[1] ?? '0', 10);
-  const laptop = parseInt(laptopMatch?.[1] ?? '0', 10);
-  const tablet = parseInt(tabletMatch?.[1] ?? '0', 10);
-  const desktop = parseInt(desktopMatch?.[1] ?? '0', 10);
-  const topBarrier = barrierMatch?.[1]?.trim() ?? 'Unknown';
-  const topBarrierScore = barrierMatch?.[2] ?? '0';
-  const barrier2 = barrier2Match?.[1]?.trim() ?? 'N/A';
-  const barrier3 = barrier3Match?.[1]?.trim() ?? 'N/A';
-  const skillsScore = parseFloat(skillsScoreMatch?.[1] ?? '0');
-  const techInterest = parseFloat(techInterestMatch?.[1] ?? '0');
-  const employmentScore = parseFloat(employmentMatch?.[1] ?? '0');
-  const aiReadiness = parseFloat(aiReadinessMatch?.[1] ?? '0');
-  const aiAdoption = parseFloat(aiAdoptionMatch?.[1] ?? '0');
-  const accessIndex = parseFloat(accessMatch?.[1] ?? '0');
-  const remote = parseInt(remoteMatch?.[1] ?? '0', 10);
   const topLocation = topLocationMatch?.[1]?.trim() ?? 'Unknown';
   const topLocationPct = topLocationMatch?.[2] ?? '0';
   const topGender = genderMatch?.[1]?.trim() ?? 'Unknown';
   const topGenderPct = genderMatch?.[2] ?? '0';
-  const powerSource = powerSourceMatch?.[1]?.trim() ?? 'Unknown';
   const topAITools = topAIToolsMatch?.[1]?.trim() ?? 'Not specified';
+
+  // Extract KPIs directly from the SSOT analytics object (no regex parsing)
+  console.log("[generateHeuristicReport] Received analytics?", analytics ? "YES" : "NO");
+  if (analytics) {
+    console.log("[generateHeuristicReport] Analytics values:", {
+      digitalAccessIndex: analytics.digitalAccessIndex,
+      digitalSkillsReadiness: analytics.digitalSkillsReadiness,
+      aiReadinessIndex: analytics.aiReadinessIndex,
+      smartphonePct: analytics.smartphonePct
+    });
+  }
+
+  const smartphone = analytics?.smartphonePct ?? 0;
+  const laptop = analytics?.laptopPct ?? 0;
+  const tablet = analytics?.tabletPct ?? 0;
+  const desktop = analytics?.desktopPct ?? 0;
+  const topBarrier = analytics?.topBarrier ?? 'Unknown';
+  const topBarrierScore = analytics?.topBarrierScore?.toFixed(2) ?? '0';
+  
+  // We extract barrier2 and barrier3 from RAG if available, else omit
+  const barrier2Match = ragContext.match(/2\. ([\w][\w ]+): ([\d.]+)\/5/);
+  const barrier3Match = ragContext.match(/3\. ([\w][\w ]+): ([\d.]+)\/5/);
+  const barrier2 = barrier2Match?.[1]?.trim() ?? 'N/A';
+  const barrier3 = barrier3Match?.[1]?.trim() ?? 'N/A';
+
+  const skillsScore = analytics?.digitalSkillsReadiness ?? 0;
+  const techInterest = analytics?.careerAwarenessScore ?? 0;
+  const employmentScore = analytics?.employmentReadinessIndex ?? 0;
+  const aiReadiness = analytics?.aiReadinessIndex ?? 0;
+  const aiAdoption = analytics?.aiAdoptionRate ?? 0;
+  const accessIndex = analytics?.digitalAccessIndex ?? 0;
+  const remote = analytics?.remoteWorkInterest ?? 0;
+  const powerSource = analytics?.topPowerSource ?? 'Unknown';
 
   if (smartphone === 0 && laptop === 0 && accessIndex === 0) {
     return `EXECUTIVE SUMMARY — Digital Skills for Decent Work\nPort Harcourt, Rivers State, Nigeria\n\nWARNING: Device ownership data could not be verified (0% smartphone and laptop). This likely indicates a parser column-mapping issue. Please visit the Admin Dashboard, check the Raw Data Diagnostic table, and verify that Google Sheets columns are being matched to the correct survey questions.`;

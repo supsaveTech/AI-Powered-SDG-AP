@@ -4,7 +4,7 @@ import { buildRAGContext } from "@/utils/ragContextBuilder";
 
 export async function POST(req: Request) {
   try {
-    const { messages, data, isReportGeneration } = await req.json();
+    const { messages, data, analytics, isReportGeneration } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
@@ -17,11 +17,18 @@ export async function POST(req: Request) {
       });
     }
 
-    // Build RAG context directly from the client-provided data
-    const ragContext = buildRAGContext(data);
+    console.log("[API /chat] Received analytics object:", analytics ? "YES" : "NO");
+    if (analytics) {
+      console.log("[API /chat] digitalAccessIndex:", analytics.digitalAccessIndex);
+      console.log("[API /chat] digitalSkillsReadiness:", analytics.digitalSkillsReadiness);
+      console.log("[API /chat] smartphonePct:", analytics.smartphonePct);
+    }
+
+    // Build RAG context using client-provided data and SSOT analytics
+    const ragContext = buildRAGContext(data, analytics);
 
     // Call the AI Service
-    const aiResponseText = await sendChatMessage(messages, ragContext, isReportGeneration);
+    const aiResponseText = await sendChatMessage(messages, ragContext, isReportGeneration, analytics);
 
     return NextResponse.json({
       role: "assistant",
