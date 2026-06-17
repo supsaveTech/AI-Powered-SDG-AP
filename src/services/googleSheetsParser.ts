@@ -258,9 +258,17 @@ export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
       aiUsageFrequency: parseStr(row, idxAIFreq),
       aiUseCases:       parseList(row, idxAIUseCases),
 
-      techCareersKnown:   careersKnownList,
-      careerInterest:     parseStr(row, idxCareerInterest),
-      preferredTechField: parseStr(row, idxPreferredTechField),
+      techCareersKnown:       careersKnownList,
+      careerInterest:         parseStr(row, idxCareerInterest),
+      preferredTechField:     parseStr(row, idxPreferredTechField),
+      preferredWorkType:      parseStr(row, idxWorkType),
+      interestInRemoteWork:   (() => {
+        const wt = parseStr(row, idxWorkType).toLowerCase();
+        if (wt.includes('remote') || wt.includes('hybrid') || wt.includes('freelance') || wt.includes('work from home') || wt.includes('distributed')) {
+          return 'Agree';
+        }
+        return 'Neutral';
+      })(),
 
       awareSoftwareEngineering: careersKnownList.some(c => c.toLowerCase().includes('software')),
       awareDataScience:         careersKnownList.some(c => c.toLowerCase().includes('data')),
@@ -270,8 +278,7 @@ export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
       awareCloudComputing:      careersKnownList.some(c => c.toLowerCase().includes('cloud')),
       awareDigitalMarketing:    careersKnownList.some(c => c.toLowerCase().includes('marketing')),
 
-      preferredWorkType:   parseStr(row, idxWorkType),
-      interestInRemoteWork:parseStr(row, idxWorkType).toLowerCase().includes('remote') ? 'Agree' : 'Neutral',
+      // interestInRemoteWork string type replaced by boolean earlier
       desiredSkills:       parseList(row, idxDesiredSkills),
       employmentAspirations:parseStr(row, idxWorkType),
 
@@ -287,7 +294,21 @@ export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
 
       supportNeeded:   parseStr(row, idxSupport),
       recommendations: parseStr(row, idxRecs),
+
+      // Diagnostic Raw Fields
+      rawDevices:             parseStr(row, idxDevices),
+      rawWorkType:            parseStr(row, idxWorkType),
+      rawCareerInterest:      parseStr(row, idxCareerInterest)
     };
+  });
+
+  // Diagnostic Log for the first 5 respondents
+  data.slice(0, 5).forEach((d, index) => {
+    console.log(`[Diagnostic] Respondent ${index + 1}:`, {
+      devices: d.rawDevices,
+      preferredWorkType: d.rawWorkType,
+      careerInterest: d.rawCareerInterest
+    });
   });
 
   return {

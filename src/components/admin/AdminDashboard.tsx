@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getManualOverrides, setManualOverride, normalizeCommunityNameWithMethod } from "@/utils/communityNormalizer";
 import { ResponsesOverTimeChart } from "@/components/dashboard/ResponsesOverTimeChart";
 import { getResponseGrowthTimeSeries } from "@/utils/dataAggregation";
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, LogOut, BarChart2 } from "lucide-react";
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, LogOut, BarChart2, Database } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
 
 export function AdminDashboard() {
@@ -308,6 +308,35 @@ export function AdminDashboard() {
                 <div className="text-slate-500 text-xs uppercase mb-1">Remote Work Interest</div>
                 <div className="text-lg font-bold text-slate-900">{remoteWorkInterestCount}</div>
               </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 p-4 rounded-lg border shadow-sm">
+            <h3 className="text-slate-800 font-semibold mb-2 flex items-center gap-2">
+              <Database className="w-4 h-4 text-slate-500" />
+              Raw Data Diagnostic (First 5 Responses)
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-slate-600">
+                <thead className="text-xs uppercase bg-slate-100 text-slate-500">
+                  <tr>
+                    <th className="px-3 py-2">#</th>
+                    <th className="px-3 py-2">Raw Devices</th>
+                    <th className="px-3 py-2">Raw Work Type</th>
+                    <th className="px-3 py-2">Raw Career Interest</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {data.slice(0, 5).map((d, i) => (
+                    <tr key={i}>
+                      <td className="px-3 py-2">{i + 1}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{d.rawDevices || 'N/A'}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{d.rawWorkType || 'N/A'}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{d.rawCareerInterest || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 

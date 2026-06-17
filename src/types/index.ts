@@ -84,4 +84,8 @@ export interface SurveyResponse {
   // Qualitative
   supportNeeded: string;
   recommendations: string;
+  // Diagnostic Raw Fields
+  rawDevices?: string;
+  rawWorkType?: string;
+  rawCareerInterest?: string;
 }
