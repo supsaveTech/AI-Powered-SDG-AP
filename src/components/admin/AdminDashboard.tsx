@@ -10,7 +10,7 @@ import { useData } from "@/contexts/DataContext";
 export function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  const { data, diagnostics, refreshData, uploadCsv, isSyncing } = useData();
+  const { data, diagnostics, analytics, refreshData, uploadCsv, isSyncing } = useData();
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [rawName, setRawName] = useState("");
   const [canonicalName, setCanonicalName] = useState("");
@@ -89,6 +89,8 @@ export function AdminDashboard() {
   const totalRespondents = data.length;
   const smartphoneCount = data.filter(d => d.ownsSmartphone).length;
   const laptopCount = data.filter(d => d.ownsLaptop).length;
+  const tabletCount = data.filter(d => d.hasTabletAccess).length;
+  const desktopCount = data.filter(d => d.hasDesktopAccess).length;
   const aiUsageCount = data.filter(d => d.hasUsedAI).length;
   const careerInterestCount = data.filter(d => {
     const interest = String(d.careerInterest).toLowerCase();
@@ -238,17 +240,60 @@ export function AdminDashboard() {
               <BarChart2 className="w-4 h-4" /> Live Parsed Data Totals
             </h3>
             
-            <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mt-2 text-sm">
+              <div className="bg-slate-50 p-3 rounded border border-blue-200">
+                <div className="text-blue-700 text-xs uppercase mb-1 font-semibold">Smartphone %</div>
+                <div className="text-lg font-bold text-slate-900">{totalRespondents ? Math.round((smartphoneCount / totalRespondents) * 100) : 0}%</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border border-blue-200">
+                <div className="text-blue-700 text-xs uppercase mb-1 font-semibold">Laptop %</div>
+                <div className="text-lg font-bold text-slate-900">{totalRespondents ? Math.round((laptopCount / totalRespondents) * 100) : 0}%</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border border-blue-200">
+                <div className="text-blue-700 text-xs uppercase mb-1 font-semibold">Tablet %</div>
+                <div className="text-lg font-bold text-slate-900">{totalRespondents ? Math.round((tabletCount / totalRespondents) * 100) : 0}%</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border border-blue-200">
+                <div className="text-blue-700 text-xs uppercase mb-1 font-semibold">Desktop %</div>
+                <div className="text-lg font-bold text-slate-900">{totalRespondents ? Math.round((desktopCount / totalRespondents) * 100) : 0}%</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border border-purple-200">
+                <div className="text-purple-700 text-xs uppercase mb-1 font-semibold">Career Interest Score</div>
+                <div className="text-lg font-bold text-slate-900">{analytics?.careerAwarenessScore || 0}/100</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border border-purple-200">
+                <div className="text-purple-700 text-xs uppercase mb-1 font-semibold">Remote Work Interest</div>
+                <div className="text-lg font-bold text-slate-900">{analytics?.remoteWorkInterest || 0}%</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border border-emerald-200">
+                <div className="text-emerald-700 text-xs uppercase mb-1 font-semibold">Digital Skills Readiness</div>
+                <div className="text-lg font-bold text-slate-900">{analytics?.digitalSkillsReadiness || 0}/100</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border border-emerald-200">
+                <div className="text-emerald-700 text-xs uppercase mb-1 font-semibold">AI Readiness Index</div>
+                <div className="text-lg font-bold text-slate-900">{analytics?.aiReadinessIndex || 0}/100</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border border-emerald-200">
+                <div className="text-emerald-700 text-xs uppercase mb-1 font-semibold">Employment Readiness</div>
+                <div className="text-lg font-bold text-slate-900">{analytics?.employmentReadinessIndex || 0}/100</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded border col-span-2 lg:col-span-3 border-amber-200">
+                <div className="text-amber-700 text-xs uppercase mb-1 font-semibold">Top Barrier</div>
+                <div className="text-lg font-bold text-slate-900">{analytics?.topBarrier || 'N/A'}</div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mt-4 text-sm opacity-50">
               <div className="bg-slate-50 p-3 rounded border">
                 <div className="text-slate-500 text-xs uppercase mb-1">Total Respondents</div>
                 <div className="text-lg font-bold text-slate-900">{totalRespondents}</div>
               </div>
               <div className="bg-slate-50 p-3 rounded border">
-                <div className="text-slate-500 text-xs uppercase mb-1">Smartphone Owners</div>
+                <div className="text-slate-500 text-xs uppercase mb-1">Smartphone Owners (Count)</div>
                 <div className="text-lg font-bold text-slate-900">{smartphoneCount}</div>
               </div>
               <div className="bg-slate-50 p-3 rounded border">
-                <div className="text-slate-500 text-xs uppercase mb-1">Laptop Owners</div>
+                <div className="text-slate-500 text-xs uppercase mb-1">Laptop Owners (Count)</div>
                 <div className="text-lg font-bold text-slate-900">{laptopCount}</div>
               </div>
               <div className="bg-slate-50 p-3 rounded border">

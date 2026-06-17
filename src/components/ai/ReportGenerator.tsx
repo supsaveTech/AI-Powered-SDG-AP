@@ -28,7 +28,8 @@ export function ReportGenerator() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [{ role: "user", content: `Generate a comprehensive executive summary report covering all aspects of the digital skills survey: demographics, access, skills, barriers, and SDG alignment. Format it clearly with headings and bullet points. IMPORTANT: Include markdown tables that explicitly map your key findings and metrics back to the specific survey question numbers (e.g., Q11, Q23) that generated them. ${notice}` }],
-          data
+          data,
+          isReportGeneration: true
         }),
       });
 

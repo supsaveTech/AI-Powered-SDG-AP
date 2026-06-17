@@ -67,17 +67,19 @@ export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
 
   /**
    * Find column index by trying each search term as a substring in the normalized headers.
-   * If not found, logs to missingHeaders using the questionNumber.
+   * If not found, logs to missingHeaders and returns the fallbackIndex.
    */
-  const getIndex = (searchTerms: string[], questionNumber?: number): number => {
+  const getIndex = (searchTerms: string[], fallbackIndex?: number): number => {
     const idx = headers.findIndex(header =>
       searchTerms.some(term => header.includes(normalizeHeader(term)))
     );
-    if (idx === -1 && questionNumber) {
-      const qMeta = SURVEY_QUESTIONS.find(q => q.questionNumber === questionNumber);
+    if (idx === -1 && fallbackIndex !== undefined) {
+      const qMeta = SURVEY_QUESTIONS.find(q => q.questionNumber === fallbackIndex);
       if (qMeta) {
-        missingHeaders.push(`Q${questionNumber}: ${qMeta.questionText}`);
+        missingHeaders.push(`Q${fallbackIndex}: ${qMeta.questionText}`);
       }
+      console.warn(`[GoogleSheetsParser] Could not find header matching: ${searchTerms.join(' OR ')}. Falling back to index ${fallbackIndex}`);
+      return fallbackIndex;
     }
     return idx;
   };
@@ -94,13 +96,13 @@ export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
   const idxCurrentStatus = getIndex(['current status', 'currently doing'], 7);
 
   // Digital Access
-  const idxDevices          = getIndex(['devices do you have', 'regular access to', 'which devices'], 8);
-  const idxInternetRel      = getIndex(['reliable is your internet access', 'internet access'], 9);
-  const idxInternetLoc      = getIndex(['where do you mostly access the internet', 'mostly access the internet'], 10);
-  const idxElectricityRel   = getIndex(['reliable is electricity in your area', 'electricity in your area'], 11);
-  const idxPowerSource      = getIndex(['primarily power your digital devices', 'power your digital'], 12);
-  const idxElectricityImpact= getIndex(['unreliable electricity affect your ability', 'electricity affect'], 13);
-  const idxDataCost         = getIndex(['spend monthly on internet/data', 'monthly on internet', 'data access'], 14);
+  const idxDevices          = getIndex(['device', 'access to', 'smartphone', 'laptop'], 8);
+  const idxInternetRel      = getIndex(['reliable is your internet', 'internet access', 'reliable'], 9);
+  const idxInternetLoc      = getIndex(['where do you mostly', 'mostly access the internet', 'location'], 10);
+  const idxElectricityRel   = getIndex(['reliable is electricity', 'electricity in your area', 'power supply'], 11);
+  const idxPowerSource      = getIndex(['primarily power', 'power your digital', 'generator', 'grid'], 12);
+  const idxElectricityImpact= getIndex(['unreliable electricity affect', 'electricity affect', 'impact'], 13);
+  const idxDataCost         = getIndex(['spend monthly', 'monthly on internet', 'data access', 'cost'], 14);
 
   // Digital Skills
   const idxSkillsPossessed  = getIndex(['digital skills do you possess', 'skills do you possess'], 15);
@@ -119,8 +121,8 @@ export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
   const idxPreferredTechField = getIndex(['technology field interests you', 'field interests you'], 24);
 
   // Employment Readiness
-  const idxWorkType         = getIndex(['type of work are you most interested', 'work are you most interested'], 25);
-  const idxDesiredSkills    = getIndex(['digital skills would you most like to learn', 'skills would you most like to learn', 'most like to learn'], 26);
+  const idxWorkType         = getIndex(['type of work', 'work are you most interested', 'work arrangement', 'remote'], 25);
+  const idxDesiredSkills    = getIndex(['digital skills would you most like', 'skills would you most like', 'learn', 'desired'], 26);
 
   // Barriers
   const idxBarriers         = getIndex(['prevents you from learning digital skills', 'from learning digital skills', 'learning digital skills'], 27);
@@ -226,10 +228,10 @@ export function parseGoogleSheetsData(rows: unknown[][]): ParseResult {
       currentStatus: parseStr(row, idxCurrentStatus),
 
       // Q8: single multi-select column → booleans
-      ownsSmartphone:  devicesList.some(d => d.toLowerCase().includes('smartphone')),
-      ownsLaptop:      devicesList.some(d => d.toLowerCase().includes('laptop')),
-      hasDesktopAccess:devicesList.some(d => d.toLowerCase().includes('desktop')),
-      hasTabletAccess: devicesList.some(d => d.toLowerCase().includes('tablet')),
+      ownsSmartphone:  devicesList.some(d => d.toLowerCase().includes('smartphone') || d.toLowerCase().includes('phone') || d.toLowerCase().includes('mobile')),
+      ownsLaptop:      devicesList.some(d => d.toLowerCase().includes('laptop') || d.toLowerCase().includes('computer') || d.toLowerCase().includes('macbook')),
+      hasDesktopAccess:devicesList.some(d => d.toLowerCase().includes('desktop') || d.toLowerCase().includes('pc')),
+      hasTabletAccess: devicesList.some(d => d.toLowerCase().includes('tablet') || d.toLowerCase().includes('ipad')),
 
       internetReliability:    parseStr(row, idxInternetRel),
       internetAccessLocation: parseStr(row, idxInternetLoc),

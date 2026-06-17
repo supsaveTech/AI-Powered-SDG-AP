@@ -34,7 +34,8 @@ const AI_PROVIDER = process.env.OPENAI_API_KEY ? "openai" :
  */
 export async function sendChatMessage(
   messages: AIMessage[],
-  ragContext: string
+  ragContext: string,
+  isReportGeneration?: boolean
 ): Promise<string> {
   const systemMessage: AIMessage = {
     role: "system",
@@ -52,6 +53,9 @@ export async function sendChatMessage(
   }
 
   // Heuristic fallback
+  if (isReportGeneration) {
+    return generateHeuristicReport(ragContext);
+  }
   return heuristicResponse(messages[messages.length - 1]?.content ?? "", ragContext);
 }
 
@@ -257,6 +261,77 @@ function heuristicResponse(userMessage: string, ragContext: string): string {
 
   // Default contextual response
   return `**AI Data Analyst Response**\n\nBased on the survey data from **${totalStr} respondents** in Port Harcourt, I can help analyze any aspect of the "Digital Skills for Decent Work" research.\n\nYou can ask me about:\n• 📊 **Digital skills** proficiency and gaps\n• 🌐 **Device and internet access** patterns\n• 💼 **Career awareness** and employment readiness\n• 🧱 **Barriers** to learning digital skills\n• 📋 **SDG 8 or SDG 9** specific impact analysis\n• 📝 Generate an **executive summary** or policy brief\n\nWhat specific aspect of the data would you like to explore?`;
+}
+
+function generateHeuristicReport(ragContext: string): string {
+  const totalMatch = ragContext.match(/Total Survey Respondents: (\d+)/);
+  const totalStr = totalMatch?.[1] ?? '0';
+
+  const smartphoneMatch = ragContext.match(/Smartphone ownership: (\d+)%/);
+  const laptopMatch = ragContext.match(/Laptop ownership: (\d+)%/);
+  const barrierMatch = ragContext.match(/1\. (\w[\w ]+): ([\d.]+)\/5/);
+  const skillsScoreMatch = ragContext.match(/Digital Skills Readiness Score: ([\d.]+)\/100/);
+  const techInterestMatch = ragContext.match(/Technology Career Interest Score: ([\d.]+)\/100/);
+  const remoteMatch = ragContext.match(/Interest in remote work.*: (\d+)%/);
+  const topLocationMatch = ragContext.match(/Top location: ([\w ]+) \(/);
+
+  const smartphone = smartphoneMatch?.[1] ?? '0';
+  const laptop = laptopMatch?.[1] ?? '0';
+  const topBarrier = barrierMatch?.[1] ?? 'Unknown';
+  const topBarrierScore = barrierMatch?.[2] ?? '0';
+  const skillsScore = skillsScoreMatch?.[1] ?? '0';
+  const techInterest = techInterestMatch?.[1] ?? '0';
+  const remote = remoteMatch?.[1] ?? '0';
+  const topLocation = topLocationMatch?.[1] ?? 'Unknown';
+
+  return `## Executive Summary
+This report analyzes ${totalStr} survey responses from youths across Port Harcourt, with a predominant focus on ${topLocation}. The objective is to evaluate digital readiness, career aspirations, and structural barriers to inform interventions aligned with SDG 8 (Decent Work) and SDG 9 (Innovation & Infrastructure).
+
+**Key Findings:**
+* The ecosystem is mobile-first: **${smartphone}%** smartphone ownership vs. **${laptop}%** laptop access.
+* Foundational digital skills stand at **${skillsScore}/100**, indicating significant gaps in advanced capabilities.
+* Economic barriers, primarily **${topBarrier}** (${topBarrierScore}/5 severity), heavily restrict skill acquisition.
+* A strong appetite for digital economy participation exists, with **${remote}%** of respondents interested in remote work.
+
+## Demographics Analysis
+* **Total Respondents:** ${totalStr}
+* **Predominant Location:** ${topLocation}
+* **Engagement:** High enthusiasm, but heavily constrained by resources.
+
+## Digital Access Analysis
+Device ownership shapes the learning paradigm:
+| Metric | Percentage | Source |
+|---|---|---|
+| Smartphone Ownership | ${smartphone}% | Q8 |
+| Laptop Ownership | ${laptop}% | Q8 |
+
+The disparity between mobile and computer access fundamentally limits the acquisition of high-value skills like software engineering and data analysis.
+
+## Digital Skills Analysis
+* **Readiness Score:** ${skillsScore}/100
+* **Analysis:** While basic digital literacy (e.g., word processing, social media) is present, technical skills required for the modern digital economy are critically low.
+
+## Career Awareness & Employment Readiness
+* **Tech Career Interest Score:** ${techInterest}/100
+* **Remote Work Interest:** ${remote}%
+* **Analysis:** The desire for tech careers is exceptionally high, and the vast majority are eager to embrace location-independent work. However, the lack of career mapping and mentorship prevents this interest from translating into actual employment readiness.
+
+## Barrier Analysis
+The primary obstacle preventing digital upskilling is **${topBarrier}**. 
+When device access is limited and training costs remain prohibitive, youths are effectively locked out of the digital economy despite their willingness to learn.
+
+## SDG Mapping
+### SDG 8: Decent Work and Economic Growth
+The high remote work interest (${remote}%) is a direct indicator of readiness for modern economic participation. Unlocking this potential requires targeted interventions to reduce the entry barriers.
+
+### SDG 9: Industry, Innovation, and Infrastructure
+The severe lack of laptop access (${laptop}%) and low advanced digital skills represent a critical infrastructure and innovation gap. True innovation cannot occur on smartphones alone.
+
+## Evidence-Based Recommendations
+1. **Mobile-Optimized Learning:** Develop and deploy digital literacy programmes designed specifically for mobile devices to meet youths where they are.
+2. **Device Interventions:** Partner with corporate sponsors for laptop refurbishment and distribution drives to bridge the hardware gap.
+3. **Subsidized Connectivity:** Negotiate educational zero-rating or subsidized data plans with telecommunication providers to alleviate the cost of internet access.
+4. **Career Mentorship:** Establish clear pathways connecting aspiring youth with established tech professionals to translate high career interest (${techInterest}/100) into actionable employment readiness.`;
 }
 
 function heuristicInsights(pageName: string, ragContext: string): AIInsightSet {

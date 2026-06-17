@@ -4,7 +4,7 @@ import { buildRAGContext } from "@/utils/ragContextBuilder";
 
 export async function POST(req: Request) {
   try {
-    const { messages, data } = await req.json();
+    const { messages, data, isReportGeneration } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     const ragContext = buildRAGContext(data);
 
     // Call the AI Service
-    const aiResponseText = await sendChatMessage(messages, ragContext);
+    const aiResponseText = await sendChatMessage(messages, ragContext, isReportGeneration);
 
     return NextResponse.json({
       role: "assistant",

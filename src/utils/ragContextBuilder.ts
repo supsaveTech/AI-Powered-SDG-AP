@@ -40,6 +40,13 @@ export function buildRAGContext(data: SurveyResponse[]): string {
     .filter(i => i.name.toLowerCase().includes('good') || i.name.toLowerCase().includes('excellent'))
     .reduce((acc, curr) => acc + curr.value, 0) / total * 100;
 
+  const smartphonePct = Math.round((data.filter(d => d.ownsSmartphone).length / total) * 100);
+  const laptopPct = Math.round((data.filter(d => d.ownsLaptop).length / total) * 100);
+  const remoteWorkPct = Math.round((data.filter(d => {
+    const interest = String(d.interestInRemoteWork).toLowerCase();
+    return interest.includes('agree') || interest.includes('strongly agree') || interest.includes('yes');
+  }).length / total) * 100);
+
   const notice = "Based on responses collected from youths in Port Harcourt...";
 
   // --- Build context string ---
@@ -57,11 +64,13 @@ Total Survey Respondents: ${total}
 
 === DIGITAL ACCESS & INFRASTRUCTURE [Q6-Q15] ===
 - Digital Access Index: ${accessScore}/100
+- Smartphone ownership: ${smartphonePct}%
+- Laptop ownership: ${laptopPct}%
 - Good/Excellent Electricity Reliability: ${goodInternetPct.toFixed(1)}% [Source: Q12]
 - Top Power Source: ${infraMetrics.powerSource[0]?.name || 'Unknown'} [Source: Q13]
 
 === DIGITAL SKILLS [Q16-Q18] ===
-- Overall Digital Skills Readiness Score: ${digitalSkillsScore}/100
+- Digital Skills Readiness Score: ${digitalSkillsScore}/100
 
 === AI AWARENESS [Q19-Q22] ===
 - AI Readiness Index: ${aiReadinessScore}/100
@@ -69,10 +78,11 @@ Total Survey Respondents: ${total}
 - Top AI Tools: ${aiMetrics.topTools.map(t => t.name).join(', ')} [Source: Q20]
 
 === TECHNOLOGY CAREER AWARENESS [Q23-Q25] ===
-- Technology Career Awareness Score: ${techInterestScore}/100
+- Technology Career Interest Score: ${techInterestScore}/100
 
 === EMPLOYMENT READINESS [Q26-Q27] ===
 - Employment Readiness Index: ${employmentReadinessScore}/100
+- Interest in remote work: ${remoteWorkPct}%
 
 === BARRIERS TO LEARNING [Q28-Q29] ===
 Top Barriers (severity 1-5):
