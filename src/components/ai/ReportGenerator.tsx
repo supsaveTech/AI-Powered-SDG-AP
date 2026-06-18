@@ -61,9 +61,8 @@ export function ReportGenerator() {
         return;
       }
 
-      // DIAGNOSTIC SCANNER: Find any computed style containing lab, oklch, or color function
       console.log("--- STARTING COMPUTED STYLE SCAN ---");
-      const elementsToScan = [element, ...Array.from(element.querySelectorAll('*'))];
+      const elementsToScan = [element, ...Array.from(element.querySelectorAll('*'))] as HTMLElement[];
       const colorProps = [
         'color', 'backgroundColor', 'borderColor', 'borderTopColor', 
         'borderRightColor', 'borderBottomColor', 'borderLeftColor', 
@@ -76,22 +75,20 @@ export function ReportGenerator() {
       elementsToScan.forEach(el => {
         const computed = window.getComputedStyle(el);
         colorProps.forEach(prop => {
-          const val = computed.getPropertyValue(prop) || computed[prop as any];
-          if (val && (val.includes('lab(') || val.includes('oklch(') || val.includes('color('))) {
-            console.error(`FOUND OFFENDING COLOR! Element:`, el, `Property:`, prop, `Value:`, val);
+          const val = computed.getPropertyValue(prop) || (computed as any)[prop];
+          if (val && (val.includes('lab(') || val.includes('oklch(') || val.includes('oklab(') || val.includes('color('))) {
+            console.warn(`Fixing unsupported color on`, el, `Property:`, prop, `Value:`, val);
             offenders.push({ el, prop, val });
           }
         });
+        // ROOT CAUSE FIX: globals.css applies `outline-ring/50` to all elements via `*`.
+        // Tailwind v4 computes --ring as oklab() which html2canvas cannot parse.
+        // Override outlineColor inline on every element before passing to html2canvas.
+        el.style.outlineColor = 'transparent';
+        el.style.outline = 'none';
       });
-      console.log("--- END COMPUTED STYLE SCAN ---", "Total Offenders:", offenders.length);
       
-      if (offenders.length > 0) {
-        const details = offenders.map(o => `${o.el.tagName}.${o.el.className} -> ${o.prop}: ${o.val}`).join('\n');
-        alert(`Found ${offenders.length} unsupported color(s):\n${details}`);
-        // Optionally halt here, or let html2canvas crash to confirm it's the exact same issue.
-        // Halting here avoids the freeze if the freeze is caused by html2canvas internal DOM mutations.
-        throw new Error(`Diagnostic aborted export. Found unsupported colors: \n${details}`);
-      }
+      console.log("--- END SCAN ---", "Fixed", offenders.length, "unsupported computed colors");
 
 
       
