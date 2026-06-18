@@ -53,8 +53,13 @@ export function ReportGenerator() {
       console.log("PDF Export Started");
       const html2pdf = (await import('html2pdf.js')).default;
       const element = document.getElementById('pdf-report');
-      console.log(element);
-      if (!element) return;
+      console.log('PDF Element:', element);
+      
+      if (!element) {
+        alert("PDF generation failed:\nTarget element 'pdf-report' was not found in the DOM.");
+        setIsExporting(false);
+        return;
+      }
       
       const opt: any = {
         margin: 15,
@@ -68,8 +73,12 @@ export function ReportGenerator() {
       await html2pdf().set(opt).from(element).save();
       console.log("PDF Export Success");
     } catch (error) {
-      console.error("PDF Export Failed", error);
-      alert("PDF generation failed.");
+      console.error("PDF Export Failed:", error);
+      alert(
+        `PDF generation failed:\n${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
       setError("Failed to generate PDF. Please try again.");
     } finally {
       setIsExporting(false);
