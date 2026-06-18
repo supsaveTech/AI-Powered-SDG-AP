@@ -7,6 +7,7 @@ import { useData } from "@/contexts/DataContext";
 export function ReportGenerator() {
   const [isOpen, setIsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [report, setReport] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { data, analytics } = useData();
@@ -48,8 +49,11 @@ export function ReportGenerator() {
 
   const handlePrint = async () => {
     try {
+      setIsExporting(true);
+      console.log("PDF Export Started");
       const html2pdf = (await import('html2pdf.js')).default;
       const element = document.getElementById('pdf-report');
+      console.log(element);
       if (!element) return;
       
       const opt: any = {
@@ -61,10 +65,14 @@ export function ReportGenerator() {
         pagebreak: { mode: ['css', 'legacy'] }
       };
       
-      html2pdf().set(opt).from(element).save();
+      await html2pdf().set(opt).from(element).save();
+      console.log("PDF Export Success");
     } catch (error) {
-      console.error("PDF generation failed:", error);
+      console.error("PDF Export Failed", error);
+      alert("PDF generation failed.");
       setError("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -177,10 +185,20 @@ export function ReportGenerator() {
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="px-4 py-2 bg-[#8F1838] text-white rounded-lg shadow-sm hover:bg-[#8F1838]/90 transition font-medium flex items-center gap-2"
+                  disabled={isExporting}
+                  className={`px-4 py-2 text-white rounded-lg shadow-sm transition font-medium flex items-center justify-center gap-2 min-w-[160px] ${isExporting ? 'bg-slate-400 cursor-not-allowed' : 'bg-[#8F1838] hover:bg-[#8F1838]/90'}`}
                 >
-                  <Download size={18} />
-                  Download PDF
+                  {isExporting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={18} />
+                      Download PDF
+                    </>
+                  )}
                 </button>
               </div>
             )}
