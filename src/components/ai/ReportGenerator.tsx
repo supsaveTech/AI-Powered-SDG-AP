@@ -60,6 +60,40 @@ export function ReportGenerator() {
         setIsExporting(false);
         return;
       }
+
+      // DIAGNOSTIC SCANNER: Find any computed style containing lab, oklch, or color function
+      console.log("--- STARTING COMPUTED STYLE SCAN ---");
+      const elementsToScan = [element, ...Array.from(element.querySelectorAll('*'))];
+      const colorProps = [
+        'color', 'backgroundColor', 'borderColor', 'borderTopColor', 
+        'borderRightColor', 'borderBottomColor', 'borderLeftColor', 
+        'outlineColor', 'textDecorationColor', 'columnRuleColor',
+        'boxShadow', 'textShadow', 'fill', 'stroke'
+      ];
+      
+      const offenders: Array<{el: Element, prop: string, val: string}> = [];
+      
+      elementsToScan.forEach(el => {
+        const computed = window.getComputedStyle(el);
+        colorProps.forEach(prop => {
+          const val = computed.getPropertyValue(prop) || computed[prop as any];
+          if (val && (val.includes('lab(') || val.includes('oklch(') || val.includes('color('))) {
+            console.error(`FOUND OFFENDING COLOR! Element:`, el, `Property:`, prop, `Value:`, val);
+            offenders.push({ el, prop, val });
+          }
+        });
+      });
+      console.log("--- END COMPUTED STYLE SCAN ---", "Total Offenders:", offenders.length);
+      
+      if (offenders.length > 0) {
+        const details = offenders.map(o => `${o.el.tagName}.${o.el.className} -> ${o.prop}: ${o.val}`).join('\n');
+        alert(`Found ${offenders.length} unsupported color(s):\n${details}`);
+        // Optionally halt here, or let html2canvas crash to confirm it's the exact same issue.
+        // Halting here avoids the freeze if the freeze is caused by html2canvas internal DOM mutations.
+        throw new Error(`Diagnostic aborted export. Found unsupported colors: \n${details}`);
+      }
+
+
       
       const opt: any = {
         margin: 15,
