@@ -59,7 +59,7 @@ export async function sendChatMessage(
   if (isReportGeneration) {
     return generateHeuristicReport(ragContext, analytics);
   }
-  return heuristicResponse(messages[messages.length - 1]?.content ?? "", ragContext);
+  return heuristicResponse(messages, ragContext, analytics);
 }
 
 /**
@@ -194,76 +194,257 @@ async function callGemini(messages: AIMessage[], systemPrompt: string): Promise<
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 }
 
-// ─── Heuristic Engine (No API Key Required) ───────────────────────────────────
-function heuristicResponse(userMessage: string, ragContext: string): string {
-  // Guard: never fabricate data when no survey responses exist
-  const totalMatch = ragContext.match(/Total Survey Respondents: (\d+)/);
-  const total = parseInt(totalMatch?.[1] ?? '0', 10);
-  if (total === 0 || ragContext.includes('No survey data is currently available')) {
+// ─── SDG Data Analyst Knowledge Base & Insight Engine ─────────────────────────
+
+interface Insight {
+  id: string;
+  title: string;
+  severity: "High" | "Medium" | "Low";
+  explanation: string;
+  implication?: string;
+  recommendation?: string;
+  relatedMetrics: string[];
+}
+
+interface PriorityAction {
+  rank: number;
+  issue: string;
+  justification: string;
+}
+
+interface DerivedInsights {
+  strongestMetric: { name: string; score: number };
+  weakestMetric: { name: string; score: number };
+  generatedInsights: Insight[];
+  priorityActions: PriorityAction[];
+}
+
+interface AnalystKnowledgeBase {
+  analytics: AnalyticsContextType;
+  insights: DerivedInsights;
+  conversationHistory: AIMessage[];
+}
+
+// ─── ALIAS MAPPINGS ──────────────────────────────────────────────────────────
+
+const METRIC_ALIASES: Record<string, keyof AnalyticsContextType> = {
+  "ai adoption rate": "aiAdoptionRate",
+  "ai adoption": "aiAdoptionRate",
+  "ai usage": "aiAdoptionRate",
+  "digital skills readiness": "digitalSkillsReadiness",
+  "digital skills": "digitalSkillsReadiness",
+  "skills score": "digitalSkillsReadiness",
+  "ai readiness index": "aiReadinessIndex",
+  "ai readiness": "aiReadinessIndex",
+  "career awareness score": "careerAwarenessScore",
+  "career awareness": "careerAwarenessScore",
+  "employment readiness index": "employmentReadinessIndex",
+  "employment readiness": "employmentReadinessIndex",
+  "remote work interest": "remoteWorkInterest",
+  "remote work": "remoteWorkInterest",
+  "biggest barrier": "topBarrier",
+  "top barrier": "topBarrier",
+  "main obstacle": "topBarrier",
+  "digital access index": "digitalAccessIndex",
+  "digital access": "digitalAccessIndex",
+  "smartphone ownership": "smartphonePct",
+  "laptop ownership": "laptopPct",
+};
+
+// ─── INSIGHT ENGINE ─────────────────────────────────────────────────────────
+
+function generateInsights(analytics: AnalyticsContextType): DerivedInsights {
+  const generatedInsights: Insight[] = [];
+  const priorityActions: PriorityAction[] = [];
+
+  // Major Indices for strongest/weakest calculation
+  const indices = [
+    { name: "Digital Skills Readiness", score: analytics.digitalSkillsReadiness },
+    { name: "AI Readiness", score: analytics.aiReadinessIndex },
+    { name: "Career Awareness", score: analytics.careerAwarenessScore },
+    { name: "Employment Readiness", score: analytics.employmentReadinessIndex },
+    { name: "Digital Access", score: analytics.digitalAccessIndex },
+  ].filter(i => i.score > 0).sort((a, b) => b.score - a.score);
+
+  const strongestMetric = indices[0] ?? { name: "Unknown", score: 0 };
+  const weakestMetric = indices[indices.length - 1] ?? { name: "Unknown", score: 0 };
+
+  // AI Usage-Skills Gap
+  if (analytics.aiAdoptionRate > analytics.digitalSkillsReadiness + 15) {
+    generatedInsights.push({
+      id: "aiSkillsGap",
+      title: "AI Usage-Skills Gap",
+      severity: "High",
+      explanation: \`AI tool adoption (\${analytics.aiAdoptionRate.toFixed(0)}%) significantly exceeds broader Digital Skills Readiness (\${analytics.digitalSkillsReadiness.toFixed(0)}/100).\`,
+      implication: "Youth are engaging with AI tools but may lack the foundational technical competencies required to convert this usage into professional employment outcomes.",
+      recommendation: "Expand practical digital skills training programmes to backfill foundational competencies alongside AI experimentation.",
+      relatedMetrics: ["aiAdoptionRate", "digitalSkillsReadiness", "aiReadinessIndex"]
+    });
+  }
+
+  // Infrastructure Gap
+  if (analytics.smartphonePct - analytics.laptopPct > 30) {
+    generatedInsights.push({
+      id: "infrastructureGap",
+      title: "Infrastructure Gap",
+      severity: "High",
+      explanation: \`Mobile access (\${analytics.smartphonePct.toFixed(0)}%) substantially exceeds computer access (\${analytics.laptopPct.toFixed(0)}%).\`,
+      implication: "This mobile-first reality limits participation in advanced technical training such as programming, cybersecurity, and data analysis which typically require a full computing environment.",
+      recommendation: "Partner with organizations to provide subsidized laptop access or establish community tech labs.",
+      relatedMetrics: ["smartphonePct", "laptopPct", "digitalAccessIndex"]
+    });
+  }
+
+  // Aspiration Gap
+  if (analytics.remoteWorkInterest > analytics.employmentReadinessIndex + 10) {
+    generatedInsights.push({
+      id: "aspirationGap",
+      title: "Aspiration Gap",
+      severity: "Medium",
+      explanation: \`Interest in remote work (\${analytics.remoteWorkInterest.toFixed(0)}%) exceeds actual Employment Readiness (\${analytics.employmentReadinessIndex.toFixed(0)}/100).\`,
+      implication: "There is strong demand for digital economy participation, but respondents lack the structured career pathways or practical experience to enter the market.",
+      recommendation: "Create structured mentorship programmes linking aspiring youth to working tech professionals.",
+      relatedMetrics: ["remoteWorkInterest", "employmentReadinessIndex", "careerAwarenessScore"]
+    });
+  }
+
+  // Priority Actions
+  if (analytics.topBarrier !== "Unknown") {
+    priorityActions.push({
+      rank: 1,
+      issue: analytics.topBarrier,
+      justification: \`Highest reported barrier to upskilling (severity: \${analytics.topBarrierScore.toFixed(2)}/5).\`
+    });
+  }
+  
+  if (analytics.smartphonePct - analytics.laptopPct > 30) {
+    priorityActions.push({
+      rank: priorityActions.length + 1,
+      issue: "Infrastructure & Device Access",
+      justification: \`\${(analytics.smartphonePct - analytics.laptopPct).toFixed(0)}-point gap between smartphone and laptop ownership limits advanced skill acquisition.\`
+    });
+  }
+
+  return { strongestMetric, weakestMetric, generatedInsights, priorityActions };
+}
+
+// ─── STATE MANAGER ──────────────────────────────────────────────────────────
+
+let lastMetricContext: keyof AnalyticsContextType | null = null;
+let lastInsightContext: string | null = null;
+
+// ─── INTENT ROUTER ──────────────────────────────────────────────────────────
+
+function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsContext?: AnalyticsContextType | null): string {
+  if (!analyticsContext) {
     return 'No survey data is currently available. Please synchronize Google Sheets data or upload a CSV to generate insights grounded in real survey responses.';
   }
 
-  const q = userMessage.toLowerCase();
+  const userMessage = messages[messages.length - 1]?.content.toLowerCase() || "";
+  const akb: AnalystKnowledgeBase = {
+    analytics: analyticsContext,
+    insights: generateInsights(analyticsContext),
+    conversationHistory: messages
+  };
 
-  // Parse key stats from RAG context
-  const smartphoneMatch = ragContext.match(/Smartphone ownership: (\d+)%/);
-  const laptopMatch = ragContext.match(/Laptop ownership: (\d+)%/);
-  const barrierMatch = ragContext.match(/1\. (\w[\w ]+): ([\d.]+)\/5/);
-  const skillsScoreMatch = ragContext.match(/Digital Skills Readiness Score: ([\d.]+)\/100/);
-  const techInterestMatch = ragContext.match(/Technology Career Interest Score: ([\d.]+)\/100/);
-  const remoteMatch = ragContext.match(/Interest in remote work.*: (\d+)%/);
+  let intent = "UNKNOWN";
+  
+  // 1. Classification
+  if (userMessage.match(/hello|hi\b|hey|greetings/)) intent = "GREETING";
+  else if (userMessage.match(/who are you|are you an ai|what are you/)) intent = "IDENTITY";
+  else if (userMessage.match(/what do you have|help/)) intent = "HELP";
+  else if (userMessage.match(/why|imply|mean\b|explain|tell me more/)) intent = "FOLLOW_UP_WHY";
+  else if (userMessage.match(/what should be done|recommend|policymakers|prioritize|government/)) intent = "RECOMMENDATION";
+  else if (userMessage.match(/highest|lowest|strongest|weakest|compare/)) intent = "COMPARISON";
+  else if (userMessage.match(/concerns|risk|most important|barrier/)) intent = "ANALYSIS";
+  else if (userMessage.match(/sdg mapping|sdg 8|sdg 9|report|summary/)) intent = "SECTION_LOOKUP";
+  else intent = "METRIC_LOOKUP";
 
-  const smartphone = smartphoneMatch?.[1] ?? '0';
-  const laptop = laptopMatch?.[1] ?? '0';
-  const topBarrier = barrierMatch?.[1] ?? 'Unknown';
-  const topBarrierScore = barrierMatch?.[2] ?? '0';
-  const skillsScore = skillsScoreMatch?.[1] ?? '0';
-  const techInterest = techInterestMatch?.[1] ?? '0';
-  const totalStr = totalMatch?.[1] ?? '0';
-  const remote = remoteMatch?.[1] ?? '0';
+  console.log(\`[SDG Analyst] Intent: \${intent} | Query: \${userMessage}\`);
 
-  if (q.includes("who are you") || q.includes("are you an ai") || q.includes("what are you") || q.includes("hello") || q.includes("hi ") || q === "hi") {
-    return `Yes, I am the AI Data Analyst Assistant for the Digital Skills for Decent Work project!\n\nI have analyzed ${totalStr} survey responses from Port Harcourt. You can ask me about the skills gaps, access barriers, or how the data aligns with SDG 8 and 9.`;
+  // 2. Routing
+  switch (intent) {
+    case "GREETING":
+      return "Hello! I am the SDG Data Analyst Assistant. How can I help you interpret this survey data today?";
+      
+    case "IDENTITY":
+      return "I am the SDG Data Analyst Assistant. I help analyze survey findings, digital skills trends, employment readiness, and SDG-related insights deterministically based on your dataset.";
+      
+    case "HELP":
+      return \`I currently have survey findings from \${analyticsContext.respondentCount} respondents covering digital access, digital skills readiness, AI adoption, career awareness, employment readiness, and barriers to upskilling. What would you like to explore?\`;
+
+    case "FOLLOW_UP_WHY":
+      if (lastMetricContext) {
+        // Find insight related to the last metric
+        const insight = akb.insights.generatedInsights.find(i => i.relatedMetrics.includes(lastMetricContext as string));
+        if (insight) {
+          lastInsightContext = insight.id;
+          return \`The significance is: \${insight.implication || insight.explanation}\`;
+        }
+        return \`This metric (\${lastMetricContext}) is an important indicator of overall digital readiness in the context of SDG 8 and 9.\`;
+      }
+      return "Could you specify which finding you'd like me to explain further?";
+
+    case "RECOMMENDATION":
+      if (lastInsightContext) {
+        const insight = akb.insights.generatedInsights.find(i => i.id === lastInsightContext);
+        if (insight && insight.recommendation) {
+          return \`Based on that finding, I recommend: \${insight.recommendation}\`;
+        }
+      }
+      const actions = akb.insights.priorityActions.map(p => \`\${p.rank}. **\${p.issue}** (\${p.justification})\`).join("\\n");
+      return actions.length > 0 ? \`Based on the data, the priority actions are:\\n\\n\${actions}\` : "I recommend focusing on expanding digital access and skills training.";
+
+    case "COMPARISON":
+      if (userMessage.includes("strongest")) {
+        lastMetricContext = null;
+        return \`\${akb.insights.strongestMetric.name} is currently the strongest measured index at \${akb.insights.strongestMetric.score.toFixed(0)}/100.\`;
+      }
+      if (userMessage.includes("weakest")) {
+        lastMetricContext = null;
+        return \`\${akb.insights.weakestMetric.name} is the weakest major index at \${akb.insights.weakestMetric.score.toFixed(0)}/100, suggesting significant gaps in this area.\`;
+      }
+      return \`The strongest area is \${akb.insights.strongestMetric.name} (\${akb.insights.strongestMetric.score.toFixed(0)}), while the weakest is \${akb.insights.weakestMetric.name} (\${akb.insights.weakestMetric.score.toFixed(0)}).\`;
+
+    case "ANALYSIS":
+      if (userMessage.includes("concern") || userMessage.includes("risk")) {
+        const highRisk = akb.insights.generatedInsights.find(i => i.severity === "High");
+        if (highRisk) {
+          lastInsightContext = highRisk.id;
+          return \`The largest concern is the **\${highRisk.title}**. \${highRisk.explanation}\`;
+        }
+      }
+      if (userMessage.includes("important")) {
+        const insight = akb.insights.generatedInsights[0];
+        if (insight) {
+          lastInsightContext = insight.id;
+          return \`One of the most significant findings is the **\${insight.title}**. \${insight.explanation}\`;
+        }
+      }
+      if (userMessage.includes("barrier")) {
+        lastMetricContext = "topBarrier";
+        return \`The biggest reported barrier to upskilling is **\${analyticsContext.topBarrier}** (Severity: \${analyticsContext.topBarrierScore.toFixed(2)}/5).\`;
+      }
+      return "The data reveals significant gaps between aspiration and actual infrastructure access.";
+
+    case "SECTION_LOOKUP":
+      // Fallback to generating the report block if they want a section (SDG, summary, etc)
+      return generateHeuristicReport(ragContext, analyticsContext);
+
+    case "METRIC_LOOKUP":
+      for (const [alias, metricKey] of Object.entries(METRIC_ALIASES)) {
+        if (userMessage.includes(alias)) {
+          lastMetricContext = metricKey;
+          const val = analyticsContext[metricKey];
+          const displayVal = typeof val === "number" ? (metricKey.includes("Pct") || metricKey.includes("Rate") || metricKey.includes("Interest") ? \`\${val.toFixed(0)}%\` : (metricKey.includes("Score") || metricKey.includes("Index") || metricKey.includes("Readiness") ? \`\${val.toFixed(0)}/100\` : val)) : val;
+          return \`The \${alias} is **\${displayVal}**.\`;
+        }
+      }
+      return \`I'm sorry, I couldn't find a specific metric for that. Try asking about "AI Adoption", "Digital Skills", or "Biggest Barrier".\`;
+
+    default:
+      return "I am the SDG Data Analyst. Please ask me about specific survey metrics, comparisons, or recommendations.";
   }
-
-  if (q.includes("barrier") || q.includes("challenge") || q.includes("obstacle")) {
-    return `**Barrier Analysis**\n\nBased on the survey data from ${totalStr} respondents, **${topBarrier}** is the most significant barrier to digital skills acquisition, with a severity score of **${topBarrierScore}/5**.\n\nThis finding aligns with SDG 9 Target 9.c, which calls for increasing access to ICT and ensuring affordable connectivity.`;
-  }
-
-  if (q.includes("skill") || q.includes("digital skill") || q.includes("proficiency")) {
-    return `**Digital Skills Proficiency Analysis**\n\nThe overall Digital Skills Readiness Score is **${skillsScore}/100**, indicating a moderate foundation with critical gaps in advanced technical areas.\n\nNotably, **Programming** and **AI Tools** show the lowest average proficiency (below 2.5/5), while **Microsoft Word** and **Digital Marketing** score higher.\n\nThis gap directly undermines SDG 8.6, which aims to reduce the proportion of youth not in employment, education or training. Without programming and AI literacy, youth cannot access the fastest-growing employment sectors.\n\n**Recommendation:** Prioritize free bootcamps in programming and AI fundamentals targeting the 19-26 age group.`;
-  }
-
-  if (q.includes("career") || q.includes("awareness") || q.includes("job") || q.includes("employment")) {
-    return `**Career Awareness & Employment Insights**\n\nTechnology Career Interest Score stands at **${techInterest}/100**, while the Employment Readiness Index reflects strong remote work interest at **${remote}%** of respondents.\n\nHowever, specific career awareness varies significantly:\n• **Digital Marketing** and **Software Engineering** enjoy the highest recognition\n• **Cloud Computing** and **AI** remain largely unknown career paths\n\nThis awareness gap is a critical intervention point. Youth are motivated but lack the career map to channel that motivation.\n\n**SDG 8 Implication:** Bridging the awareness-readiness gap requires structured mentorship linking aspiring youth to working tech professionals.`;
-  }
-
-  if (q.includes("access") || q.includes("device") || q.includes("smartphone") || q.includes("laptop") || q.includes("internet")) {
-    return `**Digital Access Analysis**\n\nDevice access is highly asymmetric among surveyed youth:\n• **Smartphone ownership: ${smartphone}%** — near-universal access\n• **Laptop ownership: ${laptop}%** — less than half have a personal computer\n• **Good/Excellent internet: ~${remote}%** — significant reliability gaps remain\n\nThis smartphone-first reality is crucial for **SDG 9** (infrastructure) — it means any training or platform targeting these youth **must be mobile-optimized**.\n\nThe laptop gap directly limits participation in programming, data analysis, and other skill areas that require a full computer environment.`;
-  }
-
-  if (q.includes("sdg 8") || q.includes("decent work") || q.includes("economic")) {
-    return `**SDG 8 — Decent Work and Economic Growth Analysis**\n\nKey SDG 8 indicators from the survey:\n\n• **Employment Readiness:** ${skillsScore}/100 — moderate baseline for entering digital economy\n• **Remote Work Interest:** ${remote}% agree or strongly agree — high potential for location-independent income\n• **Top Barrier:** ${topBarrier} (${topBarrierScore}/5) — economic constraints limiting skill acquisition\n\n**SDG 8 Targets Addressed:**\n- 8.3: Promote development-oriented policies supporting decent job creation\n- 8.6: Reduce youth not in employment, education or training\n- 8.b: Develop and operationalize a global strategy for youth employment\n\nThe data shows strong desire for economic participation but structural barriers (cost, access) preventing entry.`;
-  }
-
-  if (q.includes("sdg 9") || q.includes("innovation") || q.includes("infrastructure")) {
-    return `**SDG 9 — Industry, Innovation and Infrastructure Analysis**\n\nKey SDG 9 indicators from the survey:\n\n• **AI Awareness:** Limited — only ~30-40% of respondents are aware of AI as a career path\n• **Programming Skills:** Avg. below 2.5/5 — critical innovation skill gap\n• **Cloud Computing Awareness:** Among the lowest of all career paths surveyed\n\n**SDG 9 Targets Addressed:**\n- 9.5: Enhance scientific research and upgrade technological capabilities\n- 9.c: Increase access to ICT and provide universal and affordable internet\n\nThe low awareness of frontier technologies (AI, cloud) combined with device access gaps means Port Harcourt youth are at risk of being bypassed by the 4th Industrial Revolution.`;
-  }
-
-  if (q.includes("school") || q.includes("elelenwo") || q.includes("lift up")) {
-    return `**School Observation — Lift Up Child Education Centre, Elelenwo**\n\nThe field observation on 22 May 2026 revealed alarming foundational gaps:\n\n| Indicator | Percentage |\n|-----------|------------|\n| Used a computer | 30% |\n| Aware of AI tools | 20% |\n| Understand programming | 10% |\n| Considered Software Eng. career | **0%** |\n\nThe 0% career consideration for Software Engineering is not a lack of interest — it's a **complete absence of exposure**. Children cannot aspire to what they do not know exists.\n\n**Recommendation:** Implement a "Digital Future Day" programme where tech professionals visit schools in underserved communities monthly to demonstrate real careers.`;
-  }
-
-  if (q.includes("summary") || q.includes("overview") || q.includes("report")) {
-    return `**Executive Summary — Digital Skills for Decent Work**\n\nThis project surveyed **${totalStr} youth** across Port Harcourt to map digital readiness for the modern economy.\n\n**Key Findings:**\n1. 📱 Smartphone access (${smartphone}%) far outpaces laptop access (${laptop}%), defining a mobile-first learning context\n2. 🎯 Digital Skills Readiness Score: **${skillsScore}/100** — foundational but insufficient for high-demand roles\n3. 🚀 Tech Career Interest: **${techInterest}/100** — appetite for growth exists\n4. 🧱 Top Barrier: **${topBarrier}** (severity ${topBarrierScore}/5) — the primary structural obstacle\n5. 🏫 School observation shows **0%** of students considered Software Engineering — an awareness crisis\n\n**SDG Alignment:**\n- SDG 8: Remote work interest (${remote}%) signals readiness for digital economy participation\n- SDG 9: Low AI/programming skills present a significant innovation gap\n\n**Priority Recommendations:**\n→ Mobile-first digital literacy programmes\n→ Subsidized device and internet access\n→ Career awareness campaigns in primary and secondary schools`;
-  }
-
-  if (q.includes("recommend") || q.includes("action") || q.includes("policy")) {
-    return `**Evidence-Based Policy Recommendations**\n\nDerived from ${totalStr} survey responses:\n\n**Education:**\n• Integrate digital literacy into school curriculum from primary level\n• Create career exposure programmes targeting ages 10-15 in schools like Lift Up Child Education Centre\n• Partner with universities for free weekend bootcamps in programming and data analysis\n\n**Infrastructure (SDG 9):**\n• Establish minimum 3 community tech labs per LGA in Port Harcourt\n• Negotiate subsidized educational data plans with MTN/Airtel\n• Launch device refurbishment drives collecting corporate laptops for student reuse\n\n**Employment (SDG 8):**\n• Create a youth-tech mentorship registry connecting trained youth with employers\n• Promote remote work pathways for youth in underserved areas\n• Establish micro-grant schemes for youth starting digital service businesses`;
-  }
-
-  // Default contextual response
-  return `**AI Data Analyst Response**\n\nBased on the survey data from **${totalStr} respondents** in Port Harcourt, I can help analyze any aspect of the "Digital Skills for Decent Work" research.\n\nYou can ask me about:\n• 📊 **Digital skills** proficiency and gaps\n• 🌐 **Device and internet access** patterns\n• 💼 **Career awareness** and employment readiness\n• 🧱 **Barriers** to learning digital skills\n• 📋 **SDG 8 or SDG 9** specific impact analysis\n• 📝 Generate an **executive summary** or policy brief\n\nWhat specific aspect of the data would you like to explore?`;
 }
 
 function generateHeuristicReport(ragContext: string, analytics?: AnalyticsContextType | null): string {
