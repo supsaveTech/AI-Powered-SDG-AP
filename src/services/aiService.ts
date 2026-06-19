@@ -250,6 +250,7 @@ const METRIC_ALIASES: Record<string, keyof AnalyticsContextType> = {
   "career awareness": "careerAwarenessScore",
   "employment readiness index": "employmentReadinessIndex",
   "employment readiness": "employmentReadinessIndex",
+  "employment": "employmentReadinessIndex",
   "remote work interest": "remoteWorkInterest",
   "remote work": "remoteWorkInterest",
   "biggest barrier": "topBarrier",
@@ -258,7 +259,13 @@ const METRIC_ALIASES: Record<string, keyof AnalyticsContextType> = {
   "digital access index": "digitalAccessIndex",
   "digital access": "digitalAccessIndex",
   "smartphone ownership": "smartphonePct",
+  "smartphone": "smartphonePct",
   "laptop ownership": "laptopPct",
+  "laptop": "laptopPct",
+  "total respondents": "totalRespondents",
+  "respondent count": "totalRespondents",
+  "participants": "totalRespondents",
+  "survey size": "totalRespondents"
 };
 
 // ─── INSIGHT ENGINE ─────────────────────────────────────────────────────────
@@ -349,6 +356,8 @@ function generateInsights(analytics: AnalyticsContextType): DerivedInsights {
 
 let lastMetricContext: keyof AnalyticsContextType | null = null;
 let lastInsightContext: string | null = null;
+let lastSectionContext: string | null = null;
+let lastIntentContext: string | null = null;
 
 // ─── INTENT ROUTER ──────────────────────────────────────────────────────────
 
@@ -378,11 +387,11 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
   let intent = "UNKNOWN";
 
   // 1. Classification
-  if (userMessage.match(/about the survey|what is this survey|how many respondents|how many communities|what data do you have|tell me about|survey metadata/)) intent = "SURVEY_OVERVIEW";
+  if (userMessage === "yes" || userMessage.match(/tell me more|why|what do you mean|how so/)) intent = "FOLLOW_UP";
+  else if (userMessage.match(/about the survey|what is this survey|how many respondents|how many communities|what data do you have|tell me about|survey metadata|summarize the survey/)) intent = "SURVEY_OVERVIEW";
   else if (userMessage.match(/hello|hi\b|hey|greetings/)) intent = "GREETING";
   else if (userMessage.match(/who are you|are you an ai|what are you/)) intent = "IDENTITY";
   else if (userMessage.match(/what do you have|help/)) intent = "HELP";
-  else if (userMessage.match(/why|imply|mean\b|explain|tell me more/)) intent = "FOLLOW_UP_WHY";
   else if (userMessage.match(/what should be done|recommend|policymakers|prioritize|government/)) intent = "RECOMMENDATION";
   else if (userMessage.match(/highest|lowest|strongest|weakest|compare/)) intent = "COMPARISON";
   else if (userMessage.match(/concerns|risk|most important|barrier/)) intent = "ANALYSIS";
@@ -390,6 +399,10 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
   else intent = "METRIC_LOOKUP";
 
   console.log("[SDG Analyst] Intent: " + intent + " | Query: " + userMessage);
+  
+  if (intent !== "FOLLOW_UP") {
+    lastIntentContext = intent;
+  }
 
   // 2. Routing
   switch (intent) {
@@ -403,14 +416,32 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
       if (userMessage.includes("respondent")) return "This survey collected data from " + akb.surveyMetadata.totalRespondents + " respondents in " + akb.surveyMetadata.location + ".";
       if (userMessage.includes("communit")) return "The survey covered " + akb.surveyMetadata.totalCommunities + " communities. The top location is " + akb.surveyMetadata.topCommunities + ".";
       if (userMessage.includes("data") || userMessage.includes("what do you have")) return "I have access to " + akb.surveyMetadata.totalRespondents + " responses measuring Digital Access, Digital Skills Readiness, AI Readiness, Career Awareness, and Barriers to Upskilling. I can provide specific metrics or analytical insights across these domains.";
-      if (userMessage.includes("summary") || userMessage.match(/tell me about/)) return "**" + akb.surveyMetadata.surveyTitle + "**\n\nPurpose: " + akb.surveyMetadata.surveyPurpose + "\nScope: " + akb.surveyMetadata.totalRespondents + " respondents across " + akb.surveyMetadata.totalCommunities + " communities in " + akb.surveyMetadata.location + ".\n\nThe data highlights a mobile-first reality with a significant gap between basic digital access and advanced skills readiness.";
-      return "This is a survey titled \"" + akb.surveyMetadata.surveyTitle + "\" conducted in " + akb.surveyMetadata.location + " among " + akb.surveyMetadata.totalRespondents + " youth. Ask me about specific metrics like AI adoption, or for the executive summary.";
+      
+      return "**Survey Overview**\n\n" +
+             "- **Respondents**: " + akb.surveyMetadata.totalRespondents + "\n" +
+             "- **Communities Covered**: " + akb.surveyMetadata.totalCommunities + " (Top: " + akb.surveyMetadata.topCommunities + ")\n" +
+             "- **Strongest Area**: " + akb.insights.strongestMetric.name + " (" + akb.insights.strongestMetric.score.toFixed(0) + "/100)\n" +
+             "- **Weakest Area**: " + akb.insights.weakestMetric.name + " (" + akb.insights.weakestMetric.score.toFixed(0) + "/100)\n" +
+             "- **Biggest Barrier**: " + analyticsContext.topBarrier + "\n" +
+             "- **Key Finding**: " + (akb.insights.generatedInsights[0]?.explanation || "Significant gap between access and skills.") + "\n" +
+             "- **SDG Relevance**: Directly maps to SDG 8 (Decent Work) and SDG 9 (Innovation & Infrastructure).";
     }
 
     case "HELP":
-      return "I currently have survey findings from " + analyticsContext.respondentCount + " respondents covering digital access, digital skills readiness, AI adoption, career awareness, employment readiness, and barriers to upskilling. What would you like to explore?";
+      return "I currently have survey findings from " + analyticsContext.totalRespondents + " respondents covering digital access, digital skills readiness, AI adoption, career awareness, employment readiness, and barriers to upskilling. What would you like to explore?";
 
-    case "FOLLOW_UP_WHY": {
+    case "FOLLOW_UP": {
+      if (userMessage === "yes" || userMessage.includes("yes")) {
+        if (lastSectionContext) {
+          const contextSnapshot = lastSectionContext;
+          lastSectionContext = null; // Clear to avoid loops
+          return "Here is the information from that section:\n\n" + generateHeuristicReport(ragContext, analyticsContext);
+        }
+        if (lastIntentContext === "RECOMMENDATION") {
+           return "To implement these recommendations, I suggest starting with the " + akb.insights.priorityActions[0]?.issue + " issue.";
+        }
+      }
+      
       if (lastMetricContext) {
         const insight = akb.insights.generatedInsights.find(i => i.relatedMetrics.includes(lastMetricContext as string));
         if (insight) {
@@ -419,7 +450,7 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
         }
         return "This metric (" + lastMetricContext + ") is an important indicator of overall digital readiness in the context of SDG 8 and 9.";
       }
-      return "Could you specify which finding you'd like me to explain further?";
+      return "Could you specify what you'd like me to expand upon?";
     }
 
     case "RECOMMENDATION": {
@@ -500,6 +531,7 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
           return "I don't have an exact metric for that, but I found a related insight: " + insightMatch.explanation;
         }
         if (ragContext.toLowerCase().includes(term)) {
+          lastSectionContext = term;
           return "I found information related to '" + term + "' in the generated report. Would you like me to summarize the relevant report section?";
         }
         for (const [key, val] of Object.entries(akb.surveyMetadata)) {
