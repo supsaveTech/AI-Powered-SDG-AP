@@ -219,9 +219,19 @@ interface DerivedInsights {
   priorityActions: PriorityAction[];
 }
 
+interface SurveyMetadata {
+  totalRespondents: number;
+  totalCommunities: number;
+  topCommunities: string;
+  location: string;
+  surveyTitle: string;
+  surveyPurpose: string;
+}
+
 interface AnalystKnowledgeBase {
   analytics: AnalyticsContextType;
   insights: DerivedInsights;
+  surveyMetadata: SurveyMetadata;
   conversationHistory: AIMessage[];
 }
 
@@ -348,16 +358,28 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
   }
 
   const userMessage = messages[messages.length - 1]?.content.toLowerCase() || "";
+  const topLocMatch = ragContext.match(/Top location: ([\w ]+)/);
+  const topLocation = topLocMatch ? topLocMatch[1] : "various neighborhoods";
+
   const akb: AnalystKnowledgeBase = {
     analytics: analyticsContext,
     insights: generateInsights(analyticsContext),
+    surveyMetadata: {
+      totalRespondents: analyticsContext.totalRespondents,
+      totalCommunities: analyticsContext.communitiesReached,
+      topCommunities: topLocation,
+      location: "Port Harcourt, Rivers State, Nigeria",
+      surveyTitle: "Digital Skills for Decent Work",
+      surveyPurpose: "To map digital readiness, access, and career awareness among youth for SDG 8 & 9 alignment."
+    },
     conversationHistory: messages
   };
 
   let intent = "UNKNOWN";
 
   // 1. Classification
-  if (userMessage.match(/hello|hi\b|hey|greetings/)) intent = "GREETING";
+  if (userMessage.match(/about the survey|what is this survey|how many respondents|how many communities|what data do you have|tell me about|survey metadata/)) intent = "SURVEY_OVERVIEW";
+  else if (userMessage.match(/hello|hi\b|hey|greetings/)) intent = "GREETING";
   else if (userMessage.match(/who are you|are you an ai|what are you/)) intent = "IDENTITY";
   else if (userMessage.match(/what do you have|help/)) intent = "HELP";
   else if (userMessage.match(/why|imply|mean\b|explain|tell me more/)) intent = "FOLLOW_UP_WHY";
@@ -376,6 +398,14 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
 
     case "IDENTITY":
       return "I am the SDG Data Analyst Assistant. I help analyze survey findings, digital skills trends, employment readiness, and SDG-related insights deterministically based on your dataset.";
+
+    case "SURVEY_OVERVIEW": {
+      if (userMessage.includes("respondent")) return "This survey collected data from " + akb.surveyMetadata.totalRespondents + " respondents in " + akb.surveyMetadata.location + ".";
+      if (userMessage.includes("communit")) return "The survey covered " + akb.surveyMetadata.totalCommunities + " communities. The top location is " + akb.surveyMetadata.topCommunities + ".";
+      if (userMessage.includes("data") || userMessage.includes("what do you have")) return "I have access to " + akb.surveyMetadata.totalRespondents + " responses measuring Digital Access, Digital Skills Readiness, AI Readiness, Career Awareness, and Barriers to Upskilling. I can provide specific metrics or analytical insights across these domains.";
+      if (userMessage.includes("summary") || userMessage.match(/tell me about/)) return "**" + akb.surveyMetadata.surveyTitle + "**\n\nPurpose: " + akb.surveyMetadata.surveyPurpose + "\nScope: " + akb.surveyMetadata.totalRespondents + " respondents across " + akb.surveyMetadata.totalCommunities + " communities in " + akb.surveyMetadata.location + ".\n\nThe data highlights a mobile-first reality with a significant gap between basic digital access and advanced skills readiness.";
+      return "This is a survey titled \"" + akb.surveyMetadata.surveyTitle + "\" conducted in " + akb.surveyMetadata.location + " among " + akb.surveyMetadata.totalRespondents + " youth. Ask me about specific metrics like AI adoption, or for the executive summary.";
+    }
 
     case "HELP":
       return "I currently have survey findings from " + analyticsContext.respondentCount + " respondents covering digital access, digital skills readiness, AI adoption, career awareness, employment readiness, and barriers to upskilling. What would you like to explore?";
@@ -462,7 +492,24 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
           return "The " + alias + " is **" + displayVal + "**.";
         }
       }
-      return "I'm sorry, I couldn't find a specific metric for that. Try asking about \"AI Adoption\", \"Digital Skills\", or \"Biggest Barrier\".";
+      // Fallback: Search through Knowledge Base instead of giving up
+      const searchTerms = userMessage.replace(/[^\w\s]/g, '').split(/\s+/).filter(t => t.length > 4);
+      for (const term of searchTerms) {
+        const insightMatch = akb.insights.generatedInsights.find(i => i.title.toLowerCase().includes(term) || i.explanation.toLowerCase().includes(term));
+        if (insightMatch) {
+          return "I don't have an exact metric for that, but I found a related insight: " + insightMatch.explanation;
+        }
+        if (ragContext.toLowerCase().includes(term)) {
+          return "I found information related to '" + term + "' in the generated report. Would you like me to summarize the relevant report section?";
+        }
+        for (const [key, val] of Object.entries(akb.surveyMetadata)) {
+          if (typeof val === 'string' && val.toLowerCase().includes(term)) {
+             return "I couldn't find a precise metric, but regarding the survey metadata: " + val;
+          }
+        }
+      }
+
+      return "I couldn't find a specific metric for that in the dataset. Try asking about \"AI Adoption\", \"Digital Skills\", or \"Biggest Barrier\".";
     }
 
     default:
