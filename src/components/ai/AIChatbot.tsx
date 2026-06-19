@@ -17,7 +17,7 @@ export function AIChatbot() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { data } = useData();
+  const { data, analytics } = useData();
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -54,7 +54,8 @@ export function AIChatbot() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
             messages: newMessages,
-            data 
+            data,
+            analytics 
         }),
       });
 
