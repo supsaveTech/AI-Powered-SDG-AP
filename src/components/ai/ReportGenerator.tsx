@@ -48,60 +48,35 @@ export function ReportGenerator() {
   };
 
   const handlePrint = async () => {
+    if (!report) return;
     try {
       setIsExporting(true);
-      console.log("PDF Export Started");
-      const html2pdf = (await import('html2pdf.js')).default;
-      const element = document.getElementById('pdf-report');
-      console.log('PDF Element:', element);
-      
-      if (!element) {
-        alert("PDF generation failed:\nTarget element 'pdf-report' was not found in the DOM.");
-        setIsExporting(false);
-        return;
-      }
+      console.log("PDF Export Started — using @react-pdf/renderer");
 
-      console.log("--- STARTING COMPUTED STYLE SCAN ---");
-      const elementsToScan = [element, ...Array.from(element.querySelectorAll('*'))] as HTMLElement[];
-      const colorProps = [
-        'color', 'backgroundColor', 'borderColor', 'borderTopColor', 
-        'borderRightColor', 'borderBottomColor', 'borderLeftColor', 
-        'outlineColor', 'textDecorationColor', 'columnRuleColor',
-        'boxShadow', 'textShadow', 'fill', 'stroke'
-      ];
-      
-      const offenders: Array<{el: Element, prop: string, val: string}> = [];
-      
-      elementsToScan.forEach(el => {
-        const computed = window.getComputedStyle(el);
-        colorProps.forEach(prop => {
-          const val = computed.getPropertyValue(prop) || (computed as any)[prop];
-          if (val && (val.includes('lab(') || val.includes('oklch(') || val.includes('oklab(') || val.includes('color('))) {
-            console.warn(`Fixing unsupported color on`, el, `Property:`, prop, `Value:`, val);
-            offenders.push({ el, prop, val });
-          }
-        });
-        // ROOT CAUSE FIX: globals.css applies `outline-ring/50` to all elements via `*`.
-        // Tailwind v4 computes --ring as oklab() which html2canvas cannot parse.
-        // Override outlineColor inline on every element before passing to html2canvas.
-        el.style.outlineColor = 'transparent';
-        el.style.outline = 'none';
+      // Dynamically import so the PDF engine only loads when needed
+      const [{ pdf }, { ReportPDFDocument }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('./ReportPDF'),
+      ]);
+
+      const date = new Date().toLocaleDateString('en-GB', {
+        day: 'numeric', month: 'long', year: 'numeric',
       });
-      
-      console.log("--- END SCAN ---", "Fixed", offenders.length, "unsupported computed colors");
 
+      // Use the EXACT report string already displayed in the modal — no re-generation
+      const blob = await pdf(
+        <ReportPDFDocument report={report} date={date} />
+      ).toBlob();
 
-      
-      const opt: any = {
-        margin: 15,
-        filename: 'Digital-Skills-For-Decent-Work.pdf',
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['css', 'legacy'] }
-      };
-      
-      await html2pdf().set(opt).from(element).save();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Digital-Skills-For-Decent-Work.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
       console.log("PDF Export Success");
     } catch (error) {
       console.error("PDF Export Failed:", error);
@@ -115,6 +90,7 @@ export function ReportGenerator() {
       setIsExporting(false);
     }
   };
+
 
   return (
     <>
