@@ -275,7 +275,7 @@ function generateInsights(analytics: AnalyticsContextType): DerivedInsights {
       id: "aiSkillsGap",
       title: "AI Usage-Skills Gap",
       severity: "High",
-      explanation: \`AI tool adoption (\${analytics.aiAdoptionRate.toFixed(0)}%) significantly exceeds broader Digital Skills Readiness (\${analytics.digitalSkillsReadiness.toFixed(0)}/100).\`,
+      explanation: `AI tool adoption (${analytics.aiAdoptionRate.toFixed(0)}%) significantly exceeds broader Digital Skills Readiness (${analytics.digitalSkillsReadiness.toFixed(0)}/100).`,
       implication: "Youth are engaging with AI tools but may lack the foundational technical competencies required to convert this usage into professional employment outcomes.",
       recommendation: "Expand practical digital skills training programmes to backfill foundational competencies alongside AI experimentation.",
       relatedMetrics: ["aiAdoptionRate", "digitalSkillsReadiness", "aiReadinessIndex"]
@@ -288,7 +288,7 @@ function generateInsights(analytics: AnalyticsContextType): DerivedInsights {
       id: "infrastructureGap",
       title: "Infrastructure Gap",
       severity: "High",
-      explanation: \`Mobile access (\${analytics.smartphonePct.toFixed(0)}%) substantially exceeds computer access (\${analytics.laptopPct.toFixed(0)}%).\`,
+      explanation: `Mobile access (${analytics.smartphonePct.toFixed(0)}%) substantially exceeds computer access (${analytics.laptopPct.toFixed(0)}%).`,
       implication: "This mobile-first reality limits participation in advanced technical training such as programming, cybersecurity, and data analysis which typically require a full computing environment.",
       recommendation: "Partner with organizations to provide subsidized laptop access or establish community tech labs.",
       relatedMetrics: ["smartphonePct", "laptopPct", "digitalAccessIndex"]
@@ -301,7 +301,7 @@ function generateInsights(analytics: AnalyticsContextType): DerivedInsights {
       id: "aspirationGap",
       title: "Aspiration Gap",
       severity: "Medium",
-      explanation: \`Interest in remote work (\${analytics.remoteWorkInterest.toFixed(0)}%) exceeds actual Employment Readiness (\${analytics.employmentReadinessIndex.toFixed(0)}/100).\`,
+      explanation: `Interest in remote work (${analytics.remoteWorkInterest.toFixed(0)}%) exceeds actual Employment Readiness (${analytics.employmentReadinessIndex.toFixed(0)}/100).`,
       implication: "There is strong demand for digital economy participation, but respondents lack the structured career pathways or practical experience to enter the market.",
       recommendation: "Create structured mentorship programmes linking aspiring youth to working tech professionals.",
       relatedMetrics: ["remoteWorkInterest", "employmentReadinessIndex", "careerAwarenessScore"]
@@ -313,7 +313,7 @@ function generateInsights(analytics: AnalyticsContextType): DerivedInsights {
     priorityActions.push({
       rank: 1,
       issue: analytics.topBarrier,
-      justification: \`Highest reported barrier to upskilling (severity: \${analytics.topBarrierScore.toFixed(2)}/5).\`
+      justification: `Highest reported barrier to upskilling (severity: ${analytics.topBarrierScore.toFixed(2)}/5).`
     });
   }
   
@@ -321,7 +321,7 @@ function generateInsights(analytics: AnalyticsContextType): DerivedInsights {
     priorityActions.push({
       rank: priorityActions.length + 1,
       issue: "Infrastructure & Device Access",
-      justification: \`\${(analytics.smartphonePct - analytics.laptopPct).toFixed(0)}-point gap between smartphone and laptop ownership limits advanced skill acquisition.\`
+      justification: `${(analytics.smartphonePct - analytics.laptopPct).toFixed(0)}-point gap between smartphone and laptop ownership limits advanced skill acquisition.`
     });
   }
 
@@ -360,7 +360,7 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
   else if (userMessage.match(/sdg mapping|sdg 8|sdg 9|report|summary/)) intent = "SECTION_LOOKUP";
   else intent = "METRIC_LOOKUP";
 
-  console.log(\`[SDG Analyst] Intent: \${intent} | Query: \${userMessage}\`);
+  console.log(`[SDG Analyst] Intent: ${intent} | Query: ${userMessage}`);
 
   // 2. Routing
   switch (intent) {
@@ -371,7 +371,7 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
       return "I am the SDG Data Analyst Assistant. I help analyze survey findings, digital skills trends, employment readiness, and SDG-related insights deterministically based on your dataset.";
       
     case "HELP":
-      return \`I currently have survey findings from \${analyticsContext.respondentCount} respondents covering digital access, digital skills readiness, AI adoption, career awareness, employment readiness, and barriers to upskilling. What would you like to explore?\`;
+      return `I currently have survey findings from ${analyticsContext.respondentCount} respondents covering digital access, digital skills readiness, AI adoption, career awareness, employment readiness, and barriers to upskilling. What would you like to explore?`;
 
     case "FOLLOW_UP_WHY":
       if (lastMetricContext) {
@@ -379,9 +379,9 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
         const insight = akb.insights.generatedInsights.find(i => i.relatedMetrics.includes(lastMetricContext as string));
         if (insight) {
           lastInsightContext = insight.id;
-          return \`The significance is: \${insight.implication || insight.explanation}\`;
+          return `The significance is: ${insight.implication || insight.explanation}`;
         }
-        return \`This metric (\${lastMetricContext}) is an important indicator of overall digital readiness in the context of SDG 8 and 9.\`;
+        return `This metric (${lastMetricContext}) is an important indicator of overall digital readiness in the context of SDG 8 and 9.`;
       }
       return "Could you specify which finding you'd like me to explain further?";
 
@@ -389,41 +389,41 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
       if (lastInsightContext) {
         const insight = akb.insights.generatedInsights.find(i => i.id === lastInsightContext);
         if (insight && insight.recommendation) {
-          return \`Based on that finding, I recommend: \${insight.recommendation}\`;
+          return `Based on that finding, I recommend: ${insight.recommendation}`;
         }
       }
-      const actions = akb.insights.priorityActions.map(p => \`\${p.rank}. **\${p.issue}** (\${p.justification})\`).join("\\n");
-      return actions.length > 0 ? \`Based on the data, the priority actions are:\\n\\n\${actions}\` : "I recommend focusing on expanding digital access and skills training.";
+      const actions = akb.insights.priorityActions.map(p => `${p.rank}. **${p.issue}** (${p.justification})`).join("\n");
+      return actions.length > 0 ? `Based on the data, the priority actions are:\n\n${actions}` : "I recommend focusing on expanding digital access and skills training.";
 
     case "COMPARISON":
       if (userMessage.includes("strongest")) {
         lastMetricContext = null;
-        return \`\${akb.insights.strongestMetric.name} is currently the strongest measured index at \${akb.insights.strongestMetric.score.toFixed(0)}/100.\`;
+        return `${akb.insights.strongestMetric.name} is currently the strongest measured index at ${akb.insights.strongestMetric.score.toFixed(0)}/100.`;
       }
       if (userMessage.includes("weakest")) {
         lastMetricContext = null;
-        return \`\${akb.insights.weakestMetric.name} is the weakest major index at \${akb.insights.weakestMetric.score.toFixed(0)}/100, suggesting significant gaps in this area.\`;
+        return `${akb.insights.weakestMetric.name} is the weakest major index at ${akb.insights.weakestMetric.score.toFixed(0)}/100, suggesting significant gaps in this area.`;
       }
-      return \`The strongest area is \${akb.insights.strongestMetric.name} (\${akb.insights.strongestMetric.score.toFixed(0)}), while the weakest is \${akb.insights.weakestMetric.name} (\${akb.insights.weakestMetric.score.toFixed(0)}).\`;
+      return `The strongest area is ${akb.insights.strongestMetric.name} (${akb.insights.strongestMetric.score.toFixed(0)}), while the weakest is ${akb.insights.weakestMetric.name} (${akb.insights.weakestMetric.score.toFixed(0)}).`;
 
     case "ANALYSIS":
       if (userMessage.includes("concern") || userMessage.includes("risk")) {
         const highRisk = akb.insights.generatedInsights.find(i => i.severity === "High");
         if (highRisk) {
           lastInsightContext = highRisk.id;
-          return \`The largest concern is the **\${highRisk.title}**. \${highRisk.explanation}\`;
+          return `The largest concern is the **${highRisk.title}**. ${highRisk.explanation}`;
         }
       }
       if (userMessage.includes("important")) {
         const insight = akb.insights.generatedInsights[0];
         if (insight) {
           lastInsightContext = insight.id;
-          return \`One of the most significant findings is the **\${insight.title}**. \${insight.explanation}\`;
+          return `One of the most significant findings is the **${insight.title}**. ${insight.explanation}`;
         }
       }
       if (userMessage.includes("barrier")) {
         lastMetricContext = "topBarrier";
-        return \`The biggest reported barrier to upskilling is **\${analyticsContext.topBarrier}** (Severity: \${analyticsContext.topBarrierScore.toFixed(2)}/5).\`;
+        return `The biggest reported barrier to upskilling is **${analyticsContext.topBarrier}** (Severity: ${analyticsContext.topBarrierScore.toFixed(2)}/5).`;
       }
       return "The data reveals significant gaps between aspiration and actual infrastructure access.";
 
@@ -436,11 +436,11 @@ function heuristicResponse(messages: AIMessage[], ragContext: string, analyticsC
         if (userMessage.includes(alias)) {
           lastMetricContext = metricKey;
           const val = analyticsContext[metricKey];
-          const displayVal = typeof val === "number" ? (metricKey.includes("Pct") || metricKey.includes("Rate") || metricKey.includes("Interest") ? \`\${val.toFixed(0)}%\` : (metricKey.includes("Score") || metricKey.includes("Index") || metricKey.includes("Readiness") ? \`\${val.toFixed(0)}/100\` : val)) : val;
-          return \`The \${alias} is **\${displayVal}**.\`;
+          const displayVal = typeof val === "number" ? (metricKey.includes("Pct") || metricKey.includes("Rate") || metricKey.includes("Interest") ? `${val.toFixed(0)}%` : (metricKey.includes("Score") || metricKey.includes("Index") || metricKey.includes("Readiness") ? `${val.toFixed(0)}/100` : val)) : val;
+          return `The ${alias} is **${displayVal}**.`;
         }
       }
-      return \`I'm sorry, I couldn't find a specific metric for that. Try asking about "AI Adoption", "Digital Skills", or "Biggest Barrier".\`;
+      return `I'm sorry, I couldn't find a specific metric for that. Try asking about "AI Adoption", "Digital Skills", or "Biggest Barrier".`;
 
     default:
       return "I am the SDG Data Analyst. Please ask me about specific survey metrics, comparisons, or recommendations.";
